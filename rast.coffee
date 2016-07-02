@@ -1212,9 +1212,6 @@ class rast.Slot
         @[attribute.name] = attribute.default
       $.extend @, options, 'class': 'rast.' + @constructor.name
 
-    serialize: ->
-      @.toJSON()
-
     generateEditHtml: ->
       $element = @generateHtml()
       $($element).addClass('editedSlot')
@@ -1566,7 +1563,7 @@ $ ->
         mw.loader.using 'jquery.colorUtil', EditTools.setup
 
     serialize: ->
-      JSON.stringify(@subsets)
+      JSON.stringify(@subsets, null, 2)
 
     subpageStorageName: 'AStools.js',
 
