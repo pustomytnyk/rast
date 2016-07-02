@@ -1079,9 +1079,7 @@ class rast.SubsetsManager
         @addSlot(slot, internalSubset)
 
     toJSON: ->
-      {
-        subsets: @subsets
-      }
+      @subsets
 
     deserialize: (subsets) ->
       $.each(subsets, (i, subset) =>
@@ -1571,7 +1569,7 @@ $ ->
       @serializeToPage('User:' + mw.config.values.wgUserName + '/' + @subpageStorageName)
 
     serializeToPage: (pagename) ->
-      serializedTools = "<nowiki>#{ @toJSON() }</nowiki>""
+      serializedTools = "<nowiki>#{ @serialize() }</nowiki>"
       rast.PageStorage.save(pagename, serializedTools)
 
     readFromSubpage: (onNotFound) ->
