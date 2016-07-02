@@ -1434,7 +1434,7 @@ $ ->
           return false
       true
     charinsertDivider: ' '
-    extraCSS: '#edittools .rastMenu.view { position: absolute; left: 0px; } #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; } #edittools .editedSlot { cursor: move; min-width: 10px; border-left: 1px solid black; border-top: 1px solid black; border-bottom: 1px solid black; } #edittools .slotClass { cursor: copy; } #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; } #edittools .ui-state-highlight { height: 1em; line-height: 1em; } #edittools [data-id]{ display: inline-block } .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; } .specialchars-tabs a{ display: block; } #edittools { border: solid #aaaaaa 1px; } .mw-editTools a{ cursor: pointer; } .overflowHidden { overflow: hidden; } .specialchars-tabs .asnav-selectedtab{ background: #F0F0F0; } #edittools .highlighted { opacity: 0.5; }'
+    extraCSS: '#edittools { min-height: 20px; } #edittools .rastMenu.view { position: absolute; left: 0px; } #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; } #edittools .editedSlot { cursor: move; min-width: 10px; border-left: 1px solid black; border-top: 1px solid black; border-bottom: 1px solid black; } #edittools .slotClass { cursor: copy; } #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; } #edittools .ui-state-highlight { height: 1em; line-height: 1em; } #edittools [data-id]{ display: inline-block } .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; } .specialchars-tabs a{ display: block; } #edittools { border: solid #aaaaaa 1px; } .mw-editTools a{ cursor: pointer; } .overflowHidden { overflow: hidden; } .specialchars-tabs .asnav-selectedtab{ background: #F0F0F0; } #edittools .highlighted { opacity: 0.5; }'
     appendExtraCSS: ->
       mw.util.addCSS(@extraCSS)
       return
@@ -1549,6 +1549,7 @@ $ ->
 
       EditTools.textareaHelper.enableForAllFields()
       EditTools.created = true
+      EditTools.refresh()
       EditTools.reload()
 
     reload: ->
