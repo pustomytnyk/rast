@@ -1,13 +1,78 @@
-@TextareaHelper = do ->
+window.$ = unsafeWindow.$ if unsafeWindow
 
-  TextareaHelper = ->
-    if !TextareaHelper.jqueryExtended
-      TextareaHelper.extendJquery()
-    TextareaHelper.jqueryExtended = true
+Array.prototype.rastMove = (from, to)->
+  @splice(to, 0, @splice(from, 1)[0]);
 
-  TextareaHelper.jqueryExtended = false
+# для копіювання стану (з https://github.com/pvorb/node-clone/blob/master/clone.js)
+window.rast =
 
-  TextareaHelper.extendJquery = ->
+  $getTextarea: ->
+    $('#wpTextbox1')
+
+  $getCurrentInput: ->  
+    $(document.activeElement)
+
+  insertion: {
+    replaceSpecsymbols: (s, symbols, toFunc) ->
+      res = ''
+      c = undefined
+      i = 0
+      while i < s.length
+        c = s.charAt(i)
+        if rast.insertion.isEscaped(s, i)
+          res += c
+        else if symbols.indexOf(c) > -1
+          res += toFunc(c)
+        else
+          res += c
+        i++
+      res
+
+    isEscaped: (s, i) ->
+      escSymbols = 0
+      i--
+      while i > -1 and s.charAt(i) == '/'
+        escSymbols++
+        i--
+      escSymbols % 2 == 1
+
+    indexOfUnescaped: (s, symbol) ->
+      index = -1
+      i = 0
+      while i < s.length
+        if s.charAt(i) == symbol and !rast.insertion.isEscaped(s, i)
+          index = i
+          break
+        i++
+      index  
+  }
+
+  installJQueryPlugins: ->
+    $.fn.extend 
+      asnavSelect: (id) ->
+        $tabs = $(this)
+        $tabs.find('.asnav-content').hide()
+        $tabs.find('.asnav-tabs .asnav-selectedtab').removeClass('asnav-selectedtab')
+        tabContent = $tabs.find('.asnav-tabs [data-contentid="' + id + '"]:first')
+        if tabContent.length
+          tabContent.addClass('asnav-selectedtab')
+          $tabs.find('#' + id).show()
+        else
+          first = $tabs.find('.asnav-tabs [data-contentid]:first').addClass('asnav-selectedtab')
+          $tabs.find('#' + first.attr('data-contentid')).show()
+
+      etMakeTabs: (activeTabId) ->
+        tabs = $(@)
+
+        selectFunc = (a) ->
+          $a = $(a)
+          tabs.asnavSelect $a.attr('data-contentid')
+          $a.trigger 'asNav:select', $a.attr('data-contentid')
+
+        tabs.on 'click', '.asnav-tabs [data-contentid]', ->
+          selectFunc(@)
+        tabs.asnavSelect activeTabId
+
     $.fn.extend
       insertTag: (beginTag, endTag) ->
         @each ->
@@ -16,14 +81,14 @@
           sel = undefined
 
           SelReplace = (s) ->
-            TextareaHelper.replaceSpecsymbols s, '/$', (c) ->
+            rast.insertion.replaceSpecsymbols s, '/$', (c) ->
               if c == '/'
                 return ''
               else if c == '$'
                 return sel
 
           $(this).focus()
-          sel = $(this).textSelection('getSelection')
+          sel = unsafeWindow.$(this).textSelection('getSelection')
           beginTag = SelReplace(beginTag)
           endTag = if endTag then SelReplace(endTag) else ''
           $(this).textSelection 'encapsulateSelection',
@@ -42,88 +107,6 @@
 
       getSelection: (text) ->
         @textSelection 'getSelection'
-
-  TextareaHelper.replaceSpecsymbols = (s, symbols, toFunc) ->
-    c = undefined
-    i = undefined
-    res = undefined
-    res = ''
-    c = undefined
-    i = 0
-    while i < s.length
-      c = s.charAt(i)
-      if rast.isEscaped(s, i)
-        res += c
-      else if symbols.indexOf(c) > -1
-        res += toFunc(c)
-      else
-        res += c
-      i++
-    res
-
-  TextareaHelper::enableForAllFields = ->
-    i = undefined
-    results = undefined
-    texts = undefined
-    if typeof insertTags != 'function' or window.WikEdInsertTags
-      return
-    texts = document.getElementsByTagName('textarea')
-    i = 0
-    while i < texts.length
-      $(texts[i]).keydown EditTools.checkHotkey
-      $(texts[i]).focus @registerTextField
-      i++
-    texts = document.getElementsByTagName('input')
-    i = 0
-    results = []
-    while i < texts.length
-      if texts[i].type == 'text'
-        $(texts[i]).keydown EditTools.checkHotkey
-        $(texts[i]).focus @registerTextField
-      results.push i++
-    results
-
-  TextareaHelper::last_active_textfield = null
-
-  TextareaHelper::registerTextField = (evt) ->
-    e = undefined
-    node = undefined
-    e = evt or window.event
-    node = e.target or e.srcElement
-    if !node
-      return
-    @last_active_textfield = node.id
-    true
-
-  TextareaHelper::getTextarea = ->
-    txtarea = undefined
-    txtarea = null
-    if @last_active_textfield and @last_active_textfield != ''
-      txtarea = document.getElementById(@last_active_textfield)
-    if !txtarea
-      if document.editform
-        txtarea = document.editform.wpTextbox1
-      else
-        txtarea = document.getElementsByTagName('textarea')
-        if txtarea.length > 0
-          txtarea = txtarea[0]
-        else
-          txtarea = null
-    txtarea
-
-  TextareaHelper::it = (beginTag, endTag) ->
-    $textarea = undefined
-    $textarea = $(@getTextarea())
-    $textarea.insertTag beginTag, endTag
-
-  TextareaHelper
-
-
-Array.prototype.rastMove = (from, to)->
-  @splice(to, 0, @splice(from, 1)[0]);
-
-# для копіювання стану (з https://github.com/pvorb/node-clone/blob/master/clone.js)
-window.rast =
 
   name: (constructor)->
     'rast.' + constructor.name
@@ -289,7 +272,7 @@ window.rast =
       ), 100
 
   processSelection: (txtFunc) ->
-    $textarea = $(EditTools.textareaHelper.getTextarea())
+    $textarea = rast.$getTextarea()
     txt = $textarea.getSelection()
     $textarea.setSelection txtFunc(txt)
 
@@ -362,7 +345,7 @@ window.rast =
       catch e
         $('#et-replace-invalidregex').show()
         return
-      $textarea = $(EditTools.textareaHelper.getTextarea())
+      $textarea = rast.$getTextarea()
       text = $textarea.textSelection('getContents')
       match = false
       if mode != 'replaceAll'
@@ -576,24 +559,6 @@ window.rast =
       }
     ]
 
-  isEscaped: (s, i) ->
-    escSymbols = 0
-    i--
-    while i > -1 and s.charAt(i) == '/'
-      escSymbols++
-      i--
-    escSymbols % 2 == 1
-
-  indexOfUnescaped: (s, symbol) ->
-    index = -1
-    i = 0
-    while i < s.length
-      if s.charAt(i) == symbol and !rast.isEscaped(s, i)
-        index = i
-        break
-      i++
-    index
-
   ieVersion: ->
           #http://james.padolsey.com/javascript/detect-ie-in-js-using-conditional-comments/
           v = 3
@@ -743,9 +708,9 @@ class rast.Drawer
         $subset = @drawPanel(@subsets.subsets[i], i)
         $subsetDiv = $('<div>').attr('id', 'etTabContent' + i).attr('data-id', @subsets.subsets[i].id).appendTo($content).addClass('asnav-content').attr('title', 'Клацніть, щоб вставити символи у вікно редагування').append($subset)
         i++
-      etMakeTabs @$container, true
-      @$container.append $('<div>').css('clear', 'both')
-      @$container.asnavSelect @activeTab
+      @$container.etMakeTabs(true)
+      @$container.append($('<div>').css('clear', 'both'))
+      @$container.asnavSelect(@activeTab)
 
     drawPanel: (subsetWrapper, index) ->
       $panel = $('<div>').attr('id', 'spchars-' + index).addClass('etPanel')
@@ -870,7 +835,7 @@ class rast.PlainObjectParser
           italic: false
         i = token.length - 1
         c = undefined
-        while i > -1 and !rast.isEscaped(token, i)
+        while i > -1 and !rast.insertion.isEscaped(token, i)
           c = token.charAt(i).toLowerCase()
           if c == 'ж'
             res.bold = true
@@ -893,7 +858,7 @@ class rast.PlainObjectParser
         if token == '' or token == '_'
           slot.text = EditTools.charinsertDivider + ' '
         else
-          slot.text = TextareaHelper.replaceSpecsymbols(token, '/_', @lineReplace) + ' '
+          slot.text = rast.insertion.replaceSpecsymbols(token, '/_', @lineReplace) + ' '
       else
         slot = new rast.InsertTagSlot(
           bold: modifiers.bold
@@ -920,15 +885,15 @@ class rast.PlainObjectParser
     @parseInsertion: (token, caption) ->
       tagOpen = token
       tagClose = ''
-      n = rast.indexOfUnescaped(token, '+')
+      n = rast.insertion.indexOfUnescaped(token, '+')
       if n > -1
         tagOpen = token.substring(0, n)
         tagClose = token.substring(n + 1)
-      tagOpen = TextareaHelper.replaceSpecsymbols(tagOpen, '/_', @lineReplace)
-      tagClose = TextareaHelper.replaceSpecsymbols(tagClose, '/_', @lineReplace)
+      tagOpen = rast.insertion.replaceSpecsymbols(tagOpen, '/_', @lineReplace)
+      tagClose = rast.insertion.replaceSpecsymbols(tagClose, '/_', @lineReplace)
       if !caption
         caption = tagOpen + tagClose + ' '
-        caption = TextareaHelper.replaceSpecsymbols(caption, '/$', (c) ->
+        caption = rast.insertion.replaceSpecsymbols(caption, '/$', (c) ->
           if c == '$'
             return ''
           else if c == '/'
@@ -960,8 +925,7 @@ class rast.PlainObjectParser
   # серіялізовний стан: всі символи + функції, які викликаються символами.
 class rast.SubsetsManager
 
-    constructor: (textareaHelper) ->
-      @textareaHelper = textareaHelper
+    constructor: ->
       @reset()
 
     slotById: (id)->
@@ -1287,9 +1251,9 @@ class rast.InsertionSlot extends rast.Slot
       super(options)
 
     @insertFunc = (insertion) ->
-      EditTools.textareaHelper.getTextarea().focus()
+      rast.$getTextarea().focus()
       tags = rast.PlainObjectParser.parseInsertion(insertion, '')
-      EditTools.textareaHelper.it(tags.tagOpen, tags.tagClose)
+      rast.$getTextarea().insertTag(tags.tagOpen, tags.tagClose)
 
     generateEditHtml: ->
       $a = @generateCommonHtml()
@@ -1318,8 +1282,8 @@ class rast.InsertTagSlot extends rast.LinkSlot
     @caption: 'Тег'
 
     @insertTagFunc = (open, close) ->
-      EditTools.textareaHelper.getTextarea().focus()
-      EditTools.textareaHelper.it(open, close)
+      rast.$getTextarea().focus()
+      rast.$getTextarea().insertTag(open, close)
 
     @editableAttributes: [
       { name: 'bold', type: 'boolean', default: false }
@@ -1389,31 +1353,6 @@ class rast.PageStorage
           text: string
 
 $ ->
-  $.fn.extend asnavSelect: (id) ->
-    $tabs = $(this)
-    $tabs.find('.asnav-content').hide()
-    $tabs.find('.asnav-tabs .asnav-selectedtab').removeClass('asnav-selectedtab')
-    tabContent = $tabs.find('.asnav-tabs [data-contentid="' + id + '"]:first')
-    if tabContent.length
-      tabContent.addClass('asnav-selectedtab')
-      $tabs.find('#' + id).show()
-    else
-      first = $tabs.find('.asnav-tabs [data-contentid]:first').addClass('asnav-selectedtab')
-      $tabs.find('#' + first.attr('data-contentid')).show()
-
-  window.etMakeTabs = (tabs, activeTabId) ->
-    tabs = $(tabs)
-
-    selectFunc = (a) ->
-      $a = $(a)
-      tabs.asnavSelect $a.attr('data-contentid')
-      $a.trigger 'asNav:select', $a.attr('data-contentid')
-
-    tabs.on 'click', '.asnav-tabs [data-contentid]', ->
-      selectFunc(@)
-    tabs.asnavSelect activeTabId
-
-
   window.EditTools =
     hotkeys: []
     onloadFuncs: []
@@ -1485,7 +1424,7 @@ $ ->
       etActiveTab = $tabs.find('.existingTabs .asnav-selectedtab').attr('data-contentid') || mw.cookie.get(EditTools.cookieName + 'Selected') or 'etTabContent0'
 
       refocus = ($e) ->
-        rast.focusWithoutScroll EditTools.textareaHelper.getTextarea()
+        rast.focusWithoutScroll(rast.$getTextarea())
 
       drawer = new rast.Drawer(
         $container: $tabs,
@@ -1537,9 +1476,8 @@ $ ->
       @readFromEtSubsets()
 
     setup: ->
-      EditTools.textareaHelper = new TextareaHelper
-      EditTools.subsets = new rast.SubsetsManager(EditTools.textareaHelper)
-      EditTools.temporarySubsets = new rast.SubsetsManager(EditTools.textareaHelper)
+      EditTools.subsets = new rast.SubsetsManager
+      EditTools.temporarySubsets = new rast.SubsetsManager
       $placeholder = $(EditTools.parentId)
       if !$placeholder.length
         return
@@ -1547,7 +1485,6 @@ $ ->
       $placeholder.empty().append EditTools.createEditTools()
       $('input#wpSummary').attr 'style', 'margin-bottom:3px;' #fix margins after moving placeholder
 
-      EditTools.textareaHelper.enableForAllFields()
       EditTools.created = true
       EditTools.refresh()
       EditTools.reload()
@@ -1590,4 +1527,5 @@ $ ->
   rast.PlainObjectParser.addOnloadFunc = EditTools.addOnloadFunc;
 
   mw.loader.using ['mediawiki.cookie', 'oojs-ui', 'jquery.ui.droppable'], ->
+    rast.installJQueryPlugins()
     EditTools.init()
