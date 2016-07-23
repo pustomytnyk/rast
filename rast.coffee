@@ -1,4 +1,4 @@
-window.$ = unsafeWindow.$ if unsafeWindow?
+window.$ = unsafeWindow.$ if unsafeWindow? # для Tampermonkey
 
 Array.prototype.rastMove = (from, to)->
   @splice(to, 0, @splice(from, 1)[0]);
