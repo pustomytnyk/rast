@@ -1,9 +1,8 @@
-window.$ = unsafeWindow.$ if unsafeWindow
+window.$ = unsafeWindow.$ if unsafeWindow?
 
 Array.prototype.rastMove = (from, to)->
   @splice(to, 0, @splice(from, 1)[0]);
 
-# для копіювання стану (з https://github.com/pvorb/node-clone/blob/master/clone.js)
 window.rast =
 
   $getTextarea: ->
@@ -88,7 +87,7 @@ window.rast =
                 return sel
 
           $(this).focus()
-          sel = unsafeWindow.$(this).textSelection('getSelection')
+          sel = $(this).textSelection('getSelection')
           beginTag = SelReplace(beginTag)
           endTag = if endTag then SelReplace(endTag) else ''
           $(this).textSelection 'encapsulateSelection',
@@ -111,6 +110,7 @@ window.rast =
   name: (constructor)->
     'rast.' + constructor.name
 
+  # для копіювання стану (з https://github.com/pvorb/node-clone/blob/master/clone.js)
   clone: do ->
     `var clone`
 
