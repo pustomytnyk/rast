@@ -1349,7 +1349,7 @@ class rast.PageStorage
         api.postWithEditToken
           action: 'edit'
           title: pagename
-          summary: 'serialize'
+          summary: '[[Обговорення користувача:AS/rast.js|serialize]]'
           text: string
 
 $ ->
