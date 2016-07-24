@@ -672,12 +672,9 @@ window.serialized = "<nowiki>[\r\n  {\r\n    \"caption\": \"\u041E\u0444\u043E\u
  }
 
  
-$.ready(function(){
   $.get("https://raw.githubusercontent.com/pustomytnyk/rast/master/rast.coffee", function(data) {
     eval(CoffeeScript.compile(data));
   });
-}
-) 
 
   </script>
   </head>
