@@ -1,5 +1,6 @@
 window.$ = unsafeWindow.$ if unsafeWindow? # для Tampermonkey
 
+
 `// jquery.textSelection.js fork
 ( function ( $ ) {
 	/*jshint noempty:false */
