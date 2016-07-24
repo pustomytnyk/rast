@@ -18,6 +18,34 @@
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/2.4.1/jasmine-html.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/2.4.1/boot.js"></script>
 <script type="text/javascript">
+ mw = { 
+  loader: 
+  { 
+    using: function(dependencies, func){ func() } 
+  },
+  RegExp: { 
+    escape: function(s) {
+      return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    }; 
+  },
+  cookie: { 
+    get: function(){return null },
+    set: function(){}
+  },
+  config: { 
+    get: function(conf){
+      if (conf == 'wgAction'){
+        return 'edit'
+      }
+    }, 
+    values: { 
+      wgUserName: ''
+    }
+  },
+  Api: function(){
+    return $
+  }
+ }
 $.get("https://raw.githubusercontent.com/pustomytnyk/rast/master/rast.coffee", function(data) {
   eval(CoffeeScript.compile(data));
 });
