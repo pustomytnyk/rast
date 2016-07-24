@@ -2107,3 +2107,4 @@ $ ->
   mw.loader.using ['mediawiki.cookie', 'oojs-ui', 'jquery.ui.droppable'], ->
     rast.installJQueryPlugins()
     EditTools.init()
+
