@@ -50,6 +50,7 @@ window.serialized = "<nowiki>[\r\n  {\r\n    \"caption\": \"\u041E\u0444\u043E\u
       get: function(){
         return {
           done: function(func){
+            console.log(window.serialized)
             var data = {
               query: {
                 pages: {
