@@ -665,25 +665,25 @@ window.rast =
                 return sel
 
           $(this).focus()
-          sel = $(this).textSelection('getSelection')
+          sel = $(this).etTextSelection('getSelection')
           beginTag = SelReplace(beginTag)
           endTag = if endTag then SelReplace(endTag) else ''
-          $(this).textSelection 'encapsulateSelection',
+          $(this).etTextSelection 'encapsulateSelection',
             pre: beginTag or ''
             peri: ''
             post: endTag or ''
             replace: true
           if endTag and sel != ''
-            pos = $(this).textSelection('getCaretPosition')
-            return $(this).textSelection('setSelection', start: pos - (endTag.length))
+            pos = $(this).etTextSelection('getCaretPosition')
+            return $(this).etTextSelection('setSelection', start: pos - (endTag.length))
 
       setSelection: (text) ->
-        @textSelection 'encapsulateSelection',
+        @etTextSelection 'encapsulateSelection',
           post: text
           replace: true
 
       getSelection: (text) ->
-        @textSelection 'getSelection'
+        @etTextSelection 'getSelection'
 
   name: (constructor)->
     'rast.' + constructor.name
@@ -924,7 +924,7 @@ window.rast =
         $('#et-replace-invalidregex').show()
         return
       $textarea = rast.$getTextarea()
-      text = $textarea.textSelection('getContents')
+      text = $textarea.etTextSelection('getContents')
       match = false
       if mode != 'replaceAll'
         if mode == 'replace'
@@ -964,7 +964,7 @@ window.rast =
               'peri': actualReplacement
               'replace': true
             # Reload the text after replacement
-            text = $textarea.textSelection('getContents')
+            text = $textarea.etTextSelection('getContents')
           # Find the next instance
           offset = offset + match[0].length + actualReplacement.length
           textRemainder = text.substr(offset)
@@ -988,10 +988,10 @@ window.rast =
           start = offset + match.index
           end = start + match[0].length
         rast.searchAndReplace.matchIndex = start
-        $textarea.textSelection 'setSelection',
+        $textarea.etTextSelection 'setSelection',
           'start': start
           'end': end
-        $textarea.textSelection 'scrollToCaretPosition'
+        $textarea.etTextSelection 'scrollToCaretPosition'
         rast.searchAndReplace.offset = end
         context = rast.searchAndReplace.context
         $textarea[0].focus()
