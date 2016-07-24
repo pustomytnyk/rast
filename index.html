@@ -44,6 +44,14 @@
   },
   Api: function(){
     return $
+  },
+  util: { 
+    addCSS: function(styles){
+      var css = document.createElement("style");
+      css.type = "text/css";
+      css.innerHTML = styles;
+      document.body.appendChild(css);
+    }
   }
  }
 $.get("https://raw.githubusercontent.com/pustomytnyk/rast/master/rast.coffee", function(data) {
