@@ -575,8 +575,6 @@ window.$ = unsafeWindow.$ if unsafeWindow? # для Tampermonkey
 	};
 
 }( jQuery ) );
-
-addInitializationFlag('textarea:ready')
 `
 
 Array.prototype.rastMove = (from, to)->
