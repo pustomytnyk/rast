@@ -1659,7 +1659,7 @@ class rast.UIwindow
         $content.outerHeight true
 
       # Make the window.
-      myDialog = new MyDialog(size: 'medium')
+      myDialog = new MyDialog(size: 'large')
       # Create and append a window manager, which will open and close the window.
       windowManager = new (OO.ui.WindowManager)
       $('body').append windowManager.$element
@@ -1698,7 +1698,7 @@ class rast.SlotAttributesEditor
               })
             }
 
-        inputs.push({ attribute: attribute.name, label: attribute.name, input: OOinput.OOobject, getValueFunc: OOinput.getValue }) if OOinput
+        inputs.push({ attribute: attribute.name, label: attribute.caption, input: OOinput.OOobject, getValueFunc: OOinput.getValue }) if OOinput
 
       # Create a Fieldset layout.
       fieldset = new OO.ui.FieldsetLayout( {
@@ -1717,10 +1717,13 @@ class rast.SlotAttributesEditor
 
       fieldset.addItems(fields);
 
-      $content = $('<div>')
+      $content = $('<div class="rastSpecialChars">')
       $content.append(fieldset.$element)
 
-      dialog = rast.UIwindow.show($content)
+      panel = new OO.ui.PanelLayout( { $: $, padded: true, expanded: false } );
+      panel.$element.append($content)
+
+      dialog = rast.UIwindow.show(panel.$element)
 
       saveButton = new OO.ui.ButtonWidget(icon: 'check', label: 'Зберегти')
       saveButton.on 'click', ->
@@ -1762,9 +1765,9 @@ class rast.PlainTextSlot extends rast.Slot
     @caption: 'Простий текст'
 
     @editableAttributes: [
-      { name: 'bold', type: 'boolean', default: false }
-      { name: 'italic', type: 'boolean', default: false }
-      { name: 'text', type: 'string', default: 'Plain text' }
+      { name: 'bold', type: 'boolean', default: false, caption: 'Жирний' }
+      { name: 'italic', type: 'boolean', default: false, caption: 'Похилий' }
+      { name: 'text', type: 'string', default: 'Plain text', caption: 'Текст' }
     ]
 
     generateHtml: ->
@@ -1822,7 +1825,7 @@ class rast.InsertionSlot extends rast.Slot
       { name: 'bold', caption: 'Жирний', type: 'boolean', default: false }
       { name: 'italic', caption: 'Похилий', type: 'boolean', default: false }
       { name: 'caption', caption: 'Напис', type: 'string', default: 'Нова вставка' }
-      { name: 'insertion', caption: 'Текст вставки', type: 'string', default: '$' }
+      { name: 'insertion', caption: 'Текст вставки', type: 'text', default: '$' }
     ]
 
     constructor: (options) ->
@@ -1864,11 +1867,11 @@ class rast.InsertTagSlot extends rast.LinkSlot
       rast.$getTextarea().insertTag(open, close)
 
     @editableAttributes: [
-      { name: 'bold', type: 'boolean', default: false }
-      { name: 'italic', type: 'boolean', default: false }
-      { name: 'caption', type: 'string', default: 'New insertion' }
-      { name: 'tagOpen', type: 'string', default: 'Start' }
-      { name: 'tagClose', type: 'string', default: 'End' }
+      { name: 'bold', type: 'boolean', default: false, caption: 'Жирний' }
+      { name: 'italic', type: 'boolean', default: false, caption: 'Похилий' }
+      { name: 'caption', type: 'string', default: 'New insertion', caption: 'Напис' }
+      { name: 'tagOpen', type: 'text', default: 'Start', caption: 'Відкриваюча частина' }
+      { name: 'tagClose', type: 'text', default: 'End', caption: 'Закриваюча частина' }
     ]
 
     generateHtml: ->
@@ -1883,8 +1886,8 @@ class rast.HtmlSlot extends rast.Slot
     @caption: 'Довільний код'
 
     @editableAttributes: [
-      { name: 'html', type: 'text', default: '<span>html</span>' }
-      { name: 'onload', type: 'text', default: 'function(){  }' }
+      { name: 'html', type: 'text', default: '<span>html</span>', caption: 'HTML' }
+      { name: 'onload', type: 'text', default: 'function(){  }', caption: 'JavaScript, що виконається при ініціалізації' }
     ]
 
     toJSON: ->
@@ -1951,7 +1954,25 @@ $ ->
           return false
       true
     charinsertDivider: ' '
-    extraCSS: '#edittools { min-height: 20px; } #edittools .rastMenu.view { position: absolute; left: 0px; } #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; } #edittools .editedSlot { cursor: move; min-width: 10px; border-left: 1px solid black; border-top: 1px solid black; border-bottom: 1px solid black; } #edittools .slotClass { cursor: copy; } #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; } #edittools .ui-state-highlight { height: 1em; line-height: 1em; } #edittools [data-id]{ display: inline-block } .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; } .specialchars-tabs a{ display: block; } #edittools { border: solid #aaaaaa 1px; } .mw-editTools a{ cursor: pointer; } .overflowHidden { overflow: hidden; } .specialchars-tabs .asnav-selectedtab{ background: #F0F0F0; } #edittools .highlighted { opacity: 0.5; }'
+    extraCSS: '''#edittools .etPanel [data-id] { padding: 0px 2px; text-align: center; } \
+    #edittools { min-height: 20px; } 
+    #edittools .rastMenu.view { position: absolute; left: 0px; } 
+    #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; } 
+    #edittools .editedSlot { cursor: pointer; min-width: 1em; min-height: 1em; border: 1px solid black; margin-left: -1px; } 
+    #edittools .slotClass { cursor: copy; } 
+    #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; } 
+    #edittools .ui-state-highlight { min-height: 1em; line-height: 1em; } 
+    #edittools .ui-sortable-helper { min-width: 1em; min-height: 1em; } 
+    #edittools [data-id]{ display: inline-block } 
+    .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; } 
+    .specialchars-tabs a{ display: block; } 
+    #edittools { border: solid #aaaaaa 1px; } 
+    .mw-editTools a{ cursor: pointer; } 
+    .overflowHidden { overflow: hidden; } 
+    .specialchars-tabs .asnav-selectedtab{ background: #F0F0F0; } 
+    #edittools .highlighted { opacity: 0.5; }
+    #edittools [data-id]:hover { border-color: red; }
+}'''
     appendExtraCSS: ->
       mw.util.addCSS(@extraCSS)
       return
