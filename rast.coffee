@@ -1149,14 +1149,17 @@ window.rast =
 # все, що стосується малювання
 class rast.Drawer
 
+    $editButton: ->
+      $editButton = $('<div class="menuButton edit">')
+      $editButton.attr('title', 'редагувати символи')
+
     # кнопочки для переходу в режим редагування: [edit][save][reset]
     drawMenu: ->
       $menu = $('<div class="rastMenu">')
       $menu.addClass(@mode)
       if @mode == 'view'
-        $editButton = $('<span class="menuButton">')
-        $editButton.attr('title', 'редагувати символи')
-        $editButton.text('р').click(@onEditClick)
+        $editButton = @$editButton()
+        $editButton.click(@onEditClick)
         $menu.append($editButton)
       else if @mode == 'edit'
         $persistButton = $('<span class="menuButton">').attr('title', 'зміни збережуться у Вашому особистому просторі')
@@ -1266,7 +1269,6 @@ class rast.Drawer
       @onSlotAdded = options.onSlotAdded
       @onPersistClick = options.onPersistClick
       @onSlotRemoved = options.onSlotRemoved
-      @mode = options.mode
       @slotClasses = options.slotClasses
 
     draw: (options)->
@@ -1954,13 +1956,20 @@ $ ->
           return false
       true
     charinsertDivider: ' '
-    extraCSS: '''#edittools .etPanel [data-id] { padding: 0px 2px; text-align: center; } \
+    extraCSS: '''#edittools .etPanel [data-id] { padding: 0px 2px; text-align: center; content: " "; } \
     #edittools { min-height: 20px; } 
     #edittools .rastMenu.view { position: absolute; left: 0px; } 
     #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; } 
     #edittools .editedSlot { cursor: pointer; min-width: 1em; min-height: 1em; border: 1px solid black; margin-left: -1px; } 
     #edittools .slotClass { cursor: copy; } 
-    #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; } 
+    #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; }
+    #edittools .menuButton.edit { 
+    	background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Simpleicons_Interface_gear-wheel-in-black.svg/15px-Simpleicons_Interface_gear-wheel-in-black.svg.png'); 
+    	height: 15px;;
+    	width: 15px; 
+    	background-repeat: no-repeat;
+    	background-size: cover;
+    	display: inline-block; } 
     #edittools .ui-state-highlight { min-height: 1em; line-height: 1em; } 
     #edittools .ui-sortable-helper { min-width: 1em; min-height: 1em; } 
     #edittools [data-id]{ display: inline-block } 
@@ -1993,6 +2002,7 @@ $ ->
 
     edit: ->
       @mode = 'edit'
+      $('#' + @id).find('.notFoundWarning').remove()
       @refresh()
 
     view: ->
@@ -2022,10 +2032,31 @@ $ ->
       $tabs = $('#' + @id)
       etActiveTab = $tabs.find('.existingTabs .asnav-selectedtab').attr('data-contentid') || mw.cookie.get(EditTools.cookieName + 'Selected') or 'etTabContent0'
 
-      refocus = ($e) ->
-        rast.focusWithoutScroll(rast.$getTextarea())
+      @drawer.$container = $tabs
+      @drawer.mode = @mode
+      @drawer.draw({ activeTab: etActiveTab })
 
-      drawer = new rast.Drawer(
+      @fireOnloadFuncs()
+      $tabs.on 'asNav:select', (ev, selectedId) ->
+        mw.cookie.set EditTools.cookieName + 'Selected', selectedId
+
+    save: ->
+      @subsets = @temporarySubsets
+      @subsetsUpdated()
+      @view()
+
+    restoreDefaults: ->
+      rast.setDefaultSubsets()
+      @readFromEtSubsets()
+
+    setup: ->
+      @subsets = new rast.SubsetsManager
+      @temporarySubsets = new rast.SubsetsManager
+
+      $tabs = $('#' + @id)
+      etActiveTab = $tabs.find('.existingTabs .asnav-selectedtab').attr('data-contentid') || mw.cookie.get(EditTools.cookieName + 'Selected') or 'etTabContent0'
+
+      @drawer = new rast.Drawer(
         $container: $tabs,
         subsets: @temporarySubsets,
         onTabClick: null,
@@ -2058,44 +2089,34 @@ $ ->
         onSlotRemoved: =>
           @refresh()
         slotClasses: [rast.PlainTextSlot, rast.InsertionSlot, rast.InsertTagSlot, rast.HtmlSlot]
-        )
-      drawer.draw({ activeTab: etActiveTab })
+      )
 
-      @fireOnloadFuncs()
-      $tabs.on 'asNav:select', (ev, selectedId) ->
-        mw.cookie.set EditTools.cookieName + 'Selected', selectedId
-
-    save: ->
-      @subsets = @temporarySubsets
-      @subsetsUpdated()
-      @view()
-
-    restoreDefaults: ->
-      rast.setDefaultSubsets()
-      @readFromEtSubsets()
-
-    setup: ->
-      EditTools.subsets = new rast.SubsetsManager
-      EditTools.temporarySubsets = new rast.SubsetsManager
-      $placeholder = $(EditTools.parentId)
+      $placeholder = $(@parentId)
       if !$placeholder.length
         return
-      EditTools.appendExtraCSS()
-      $placeholder.empty().append EditTools.createEditTools()
+      @appendExtraCSS()
+      $placeholder.empty().append(@createEditTools())
       $('input#wpSummary').attr 'style', 'margin-bottom:3px;' #fix margins after moving placeholder
 
-      EditTools.created = true
-      EditTools.refresh()
-      EditTools.reload()
+      @created = true
+      @refresh()
+      @reload()
 
     reload: ->
       @readFromSubpage(=>
-        @readFromEtSubsets()
+        @onSubpageNotFound()
       )
+
+    editButtonHtml: ->
+      @drawer.$editButton().prop('outerHTML')
+
+    onSubpageNotFound: ->
+      $warning = $("<div class=\"notFoundWarning\">Підсторінку із символами не знайдено або не вдалося завантажити. Це нормально, якщо ви ще не зберегли жодну версію. Натисніть #{ @editButtonHtml() }, щоб редагувати символи.</div>")
+      $('#' + @id).append($warning)
 
     init: ->
       if mw.config.get('wgAction') == 'edit' or mw.config.get('wgAction') == 'submit'
-        mw.loader.using 'jquery.colorUtil', EditTools.setup
+        mw.loader.using('jquery.colorUtil', -> EditTools.setup())
 
     serialize: ->
       JSON.stringify(@subsets, null, 2)
