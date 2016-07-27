@@ -1257,7 +1257,6 @@ class rast.Drawer
 
     constructor: (options)->
       @$container = options.$container
-      @subsets = options.subsets
       @onTabClick = options.onTabClick
       @onSaveClick = options.onSaveClick
       @onCancelClick = options.onCancelClick
@@ -1282,7 +1281,7 @@ class rast.Drawer
     # власне панелі з символами
     drawPanels: ->
       $content = $('<div>').attr('id', 'etContent').addClass('overflowHidden')
-      @$container.append $content
+      @$container.append($content)
       i = 0
       while i < @subsets.subsets.length
         $subset = @drawPanel(@subsets.subsets[i], i)
@@ -1906,8 +1905,12 @@ class rast.HtmlSlot extends rast.Slot
 
     generateHtml: ->
       $elem = $(@html)
-      $elem.attr('data-id', @id)
-      $elem
+      $wrapper = $('<div>')
+      $wrapper.attr('data-id', @id)
+      $wrapper.append($elem)
+      $overlay = $('<div class="overlay">')
+      $wrapper.append($overlay)
+      $wrapper
 
 class rast.PageStorage
 
@@ -1960,7 +1963,8 @@ $ ->
     #edittools { min-height: 20px; } 
     #edittools .rastMenu.view { position: absolute; left: 0px; } 
     #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; } 
-    #edittools .editedSlot { cursor: pointer; min-width: 1em; min-height: 1em; border: 1px solid black; margin-left: -1px; } 
+    #edittools .editedSlot { cursor: pointer; min-width: 1em; min-height: 1em; border: 1px solid black; margin-left: -1px; position: relative; } 
+    #edittools .editedSlot .overlay { width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; } 
     #edittools .slotClass { cursor: copy; } 
     #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; }
     #edittools .menuButton.edit { 
@@ -2034,6 +2038,7 @@ $ ->
 
       @drawer.$container = $tabs
       @drawer.mode = @mode
+      @drawer.subsets = @temporarySubsets
       @drawer.draw({ activeTab: etActiveTab })
 
       @fireOnloadFuncs()
@@ -2057,10 +2062,7 @@ $ ->
       etActiveTab = $tabs.find('.existingTabs .asnav-selectedtab').attr('data-contentid') || mw.cookie.get(EditTools.cookieName + 'Selected') or 'etTabContent0'
 
       @drawer = new rast.Drawer(
-        $container: $tabs,
-        subsets: @temporarySubsets,
         onTabClick: null,
-        mode: @mode,
         onSaveClick: =>
           @save()
         onCancelClick: =>
