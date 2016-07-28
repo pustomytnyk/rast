@@ -877,8 +877,9 @@ class rast.PlainObjectParser
           bold: obj.b or obj.bold
           italic: obj.i or obj.italic)
       else if obj.func
-        slot = new rast.LinkSlot(
-          func: obj.func
+        slot = new rast.InsertionSlot(
+          clickFunc: obj.func,
+          useClickFunc: true,
           caption: obj.cap or obj.caption or obj.ins)
         $.extend slot,
           bold: obj.b or obj.bold
@@ -1605,3 +1606,4 @@ $ ->
   mw.loader.using ['mediawiki.cookie', 'oojs-ui', 'jquery.ui.droppable'], ->
     rast.installJQueryPlugins()
     EditTools.init()
+
