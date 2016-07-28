@@ -803,7 +803,7 @@ class rast.PlainObjectParser
       slots
 
     @slotFromArr: (arr) ->
-      new rast.InsertTagSlot(@parseInsertion(arr[0], arr[1]))
+      new rast.InsertionSlot(insertion: arr[0], caption: arr[1])
 
     @slotsFromStr: (str) ->
       tokens = str.split(' ')
@@ -861,16 +861,18 @@ class rast.PlainObjectParser
         else
           slot.text = rast.insertion.replaceSpecsymbols(token, '/_', @lineReplace) + ' '
       else
-        slot = new rast.InsertTagSlot(
+        tags = @parseInsertion(token, '')
+        slot = new rast.InsertionSlot(
           bold: modifiers.bold
-          italic: modifiers.italic)
-        $.extend slot, @parseInsertion(token, '')
+          italic: modifiers.italic,
+          insertion: token,
+          caption: tags.caption)
       slot
 
     @generateLink: (obj) ->
       slot = undefined
       if obj.ins or obj.insert
-        slot = new rast.InsertTagSlot({})
+        slot = new rast.InsertionSlot({})
         $.extend slot, @parseInsertion(obj.ins or obj.insert, obj.cap or obj.caption,
           bold: obj.b or obj.bold
           italic: obj.i or obj.italic)
@@ -1242,7 +1244,7 @@ class rast.LinkSlot extends rast.Slot
 
 class rast.InsertionSlot extends rast.Slot
 
-    @caption: 'Вставка'
+    @caption: 'Одна вставка'
 
     @editableAttributes: [
       { name: 'bold', caption: 'Жирний', type: 'boolean', default: false }
@@ -1297,7 +1299,7 @@ class rast.InsertionSlot extends rast.Slot
 
 class rast.MultipleInsertionsSlot extends rast.Slot
 
-    @caption: 'Вставка'
+    @caption: 'Набір вставок'
 
     @editableAttributes: [
       { name: 'bold', caption: 'Жирний', type: 'boolean', default: false }
@@ -1333,29 +1335,6 @@ class rast.MultipleInsertionsSlot extends rast.Slot
     generateHtml: ->
       $elem = @generateCommonHtml()
       $elem
-
-class rast.InsertTagSlot extends rast.LinkSlot
-
-    @caption: 'Тег'
-
-    @insertTagFunc = (open, close) ->
-      rast.$getTextarea().focus()
-      rast.$getTextarea().insertTag(open, close)
-
-    @editableAttributes: [
-      { name: 'bold', type: 'boolean', default: false, caption: 'Жирний' }
-      { name: 'italic', type: 'boolean', default: false, caption: 'Похилий' }
-      { name: 'caption', type: 'string', default: 'Новий тег', caption: 'Напис' }
-      { name: 'tagOpen', type: 'text', default: 'перед$', caption: 'Відкриваюча частина' }
-      { name: 'tagClose', type: 'text', default: 'після', caption: 'Закриваюча частина' }
-    ]
-
-    generateHtml: ->
-      $a = @generateCommonHtml()
-      $a.click (event)=>
-        event.preventDefault()
-        rast.InsertTagSlot.insertTagFunc(@tagOpen, @tagClose)
-      $a
 
 class rast.HtmlSlot extends rast.Slot
 
@@ -1434,7 +1413,7 @@ $ ->
           return false
       true
     charinsertDivider: ' '
-    extraCSS: '''#edittools .etPanel [data-id] { padding: 0px 2px; text-align: center; content: " "; } \
+    extraCSS: '''#edittools .etPanel [data-id] { padding: 0px 2px; content: " "; } \
     #edittools { min-height: 20px; } 
     #edittools .rastMenu.view { position: absolute; left: 0px; } 
     #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; } 
@@ -1565,7 +1544,7 @@ $ ->
           @saveToSubpage()
         onSlotRemoved: =>
           @refresh()
-        slotClasses: [rast.PlainTextSlot, rast.InsertionSlot, rast.MultipleInsertionsSlot, rast.InsertTagSlot, rast.HtmlSlot]
+        slotClasses: [rast.PlainTextSlot, rast.InsertionSlot, rast.MultipleInsertionsSlot, rast.HtmlSlot]
       )
 
       $placeholder = $(@parentId)
@@ -1626,4 +1605,3 @@ $ ->
   mw.loader.using ['mediawiki.cookie', 'oojs-ui', 'jquery.ui.droppable'], ->
     rast.installJQueryPlugins()
     EditTools.init()
-
