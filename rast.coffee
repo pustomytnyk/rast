@@ -635,13 +635,13 @@ class rast.Drawer
 
       if @mode == 'edit'
         $addNewdiv = @drawTab($outline, '+ панель')
+        $addNewdiv.addClass('newPanelButton')
         $addNewdiv.attr('title', 'Додати нову панель')
         $addNewdiv.click(@onAddSubsetClick)
 
       @$container.append($outline)
 
-      if @mode == 'edit'
-        @drawTrashZone($outline)
+      if @mode == 'edit' && @subsets.subsets.length
         @drawSlotClasses($outline)
 
     # [для режиму редагування] список ґудзиків, які можна створювати. Перетягуються мишкою.
@@ -659,23 +659,6 @@ class rast.Drawer
         connectToSortable: '.etPanel .slots'
         helper: 'clone'
         # revert: 'invalid'
-
-    # [для режиму редагування] щоб видалити символ, перетягни його в поле корзини.
-    drawTrashZone: ($container)->
-      $trashZone = $('<div style="background-image: url(\'https://upload.wikimedia.org/wikipedia/commons/b/b7/Gnome-fs-trash-full.png\'); background-size: contain; background-repeat: no-repeat; width: 100%">')
-      $trashZone.attr('title', 'Перетягніть сюди комірку, щоб її вилучити')
-      $(window).resize ->
-        $trashZone.css('height', $trashZone.width())
-      $trashZone.droppable({
-        drop: (event, ui)=>
-          slotId = parseInt(ui.draggable.attr('data-id'))
-          @subsets.deleteSlot(slotId)
-          ui.draggable.remove()
-          @onSlotRemoved()
-        hoverClass: 'highlighted'
-      })
-      $container.append($trashZone)
-      $trashZone.css('height', $trashZone.width())
 
     constructor: (options)->
       @$container = options.$container
@@ -719,16 +702,21 @@ class rast.Drawer
       if @mode == 'edit'
         $panel.attr('title', 'Клацніть, щоб змінити комірку. Комірки можна перетягувати.')
         # поле вводу для назви панелі
-        $nameInput = $('<input type="text">').val(subsetWrapper.caption)
-        $nameInput.change { subsetWrapper: subsetWrapper }, @onTabNameChanged
+        $nameLabel = $('<label class="panelNameLabel">Назва:</label>')
         $nameInputContainer = $('<div>')
+        $nameInputContainer.append($nameLabel)
+        $nameInput = $('<input type="text">').val(subsetWrapper.caption)
+        $nameInput.change({ subsetWrapper: subsetWrapper }, @onTabNameChanged)
         $nameInputContainer.append($nameInput)
+        
         $nameInputContainer.appendTo($panel)
 
-        $panelRemoveButton = $('<span class="panelRemoveButton">Вилучити</span>')
+        $panelRemoveButton = $('<span class="panelRemoveButton">Вилучити панель</span>')
         $panelRemoveButton.click =>
           @onRemoveSubsetClick(subsetWrapper)
+        $removeIcon = $('<span class="removeIcon">')
         $nameInputContainer.append($panelRemoveButton)
+        $panelRemoveButton.append($removeIcon)
 
         $slots = $('<div class="slots">')
         $panel.append($slots)
@@ -761,7 +749,10 @@ class rast.Drawer
             @updatePreview(subsetWrapper)
           revert: true
 
-        @generateHtml($slots, subsetWrapper.slots, generateMethod)
+        if !subsetWrapper.slots.length
+          $slots.append('<span>Щоб додати комірку, сюди перетягніть потрібний вид з бічної панелі.</span>')
+        else  
+          @generateHtml($slots, subsetWrapper.slots, generateMethod)
         $preview = $('<div>').css('border-top', '1px solid color: #aaa').addClass('preview')
         $preview.append($('<div>Попередній перегляд:</div>'))
         $previewContent = $('<div class="content">')
@@ -994,6 +985,7 @@ class rast.SubsetsManager
       @insertOrAppend(subset.slots, index, slot)
 
     deleteSlot: (slotId)->
+      return unless (typeof slotId == 'Number')
       slot = @slotById(slotId)
       slotIndex = @slotIndex(slot)
       subset = @subsetBySlot(slot)
@@ -1414,10 +1406,12 @@ $ ->
           return false
       true
     charinsertDivider: ' '
-    extraCSS: '''#edittools .etPanel [data-id] { padding: 0px 2px; content: " "; } \
+    extraCSS: '''#edittools .etPanel [data-id] { padding: 0px 2px; content: " "; display: inline-block; } \
     #edittools { min-height: 20px; } 
     #edittools .rastMenu.view { position: absolute; left: 0px; } 
-    #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; } 
+    #edittools .rastMenu.edit { border-bottom: solid #aaaaaa 1px; padding: 2px 6px; margin-bottom: 4px; } 
+    #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; margin: 5px 0px; } 
+    #edittools .slots.ui-sortable .emptyHint {  } 
     #edittools .editedSlot { cursor: pointer; min-width: 1em; min-height: 1em; border: 1px solid black; margin-left: -1px; position: relative; } 
     #edittools .editedSlot .overlay { width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; } 
     #edittools .slotClass { cursor: copy; } 
@@ -1431,7 +1425,6 @@ $ ->
       display: inline-block; } 
     #edittools .ui-state-highlight { min-height: 1em; line-height: 1em; } 
     #edittools .ui-sortable-helper { min-width: 1em; min-height: 1em; } 
-    #edittools [data-id]{ display: inline-block } 
     .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; } 
     .specialchars-tabs a{ display: block; } 
     #edittools { border: solid #aaaaaa 1px; } 
@@ -1440,6 +1433,18 @@ $ ->
     .specialchars-tabs .asnav-selectedtab{ background: #F0F0F0; } 
     #edittools .highlighted { opacity: 0.5; }
     #edittools [data-id]:hover { border-color: red; }
+    #edittools .notFoundWarning { padding: 4px; }
+    #edittools .newPanelButton { padding: 4px; border-bottom: solid #aaaaaa 1px; }
+    #edittools .removeIcon { 
+      background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Ambox_delete_soft.svg/15px-Ambox_delete_soft.svg.png?uselang=uk');
+      display: inline-block;
+      width: 15px;
+      height: 15px; 
+      margin: 0px 0px 2px 4px;
+      vertical-align: middle;
+    }
+    #edittools .panelNameLabel { margin-right: 5px; }
+    #edittools .panelRemoveButton { margin-left: 20px; }
 }'''
     appendExtraCSS: ->
       mw.util.addCSS(@extraCSS)
