@@ -568,12 +568,21 @@ window.rast =
             0
           if v > 4 then v else undefined
 
+class rast.helpIcon
+
+  constructor: (@text)->
+
+  $generate: ->
+    $img = $('<img class="helpIcon">')
+    $img.attr('src', 'https://upload.wikimedia.org/wikipedia/commons/c/c4/Ambox_blue_question.svg').attr('title', @text)
+    $img
+
 # все, що стосується малювання
 class rast.Drawer
 
     $editButton: ->
       $editButton = $('<div class="menuButton edit">')
-      $editButton.attr('title', 'редагувати символи')
+      $editButton.attr('title', 'Редагувати символи.')
 
     # кнопочки для переходу в режим редагування: [edit][save][reset]
     drawMenu: ->
@@ -584,23 +593,23 @@ class rast.Drawer
         $editButton.click(@onEditClick)
         $menu.append($editButton)
       else if @mode == 'edit'
-        $persistButton = $('<span class="menuButton">').attr('title', 'зміни збережуться у Вашому особистому просторі')
+        $persistButton = $('<span class="menuButton">').attr('title', 'Символи буде збережено у Вашому особистому просторі. Для цього виконається редагування підсторінки від Вашого імени.')
         $persistButton.text('зберегти на підсторінку').click(@onPersistClick)
         $menu.append($persistButton)
         $menu.append($('<span> · </span>'))
 
-        $saveButton = $('<span class="menuButton">').attr('title', 'зміни втратяться після перевантаження сторінки')
-        $saveButton.text('зберегти тимчасово').click(@onSaveClick)
+        $saveButton = $('<span class="menuButton">').attr('title', 'Зміни збережуться тільки на час редагування сторінки і втратяться після закриття або перевантаження сторінки.')
+        $saveButton.text('зберегти').click(@onSaveClick)
         $menu.append($saveButton)
         $menu.append($('<span> · </span>'))
 
         $cancelButton = $('<span class="menuButton">')
-        $cancelButton.text('скасувати').click(@onCancelClick)
+        $cancelButton.text('скасувати').click(@onCancelClick).attr('title', 'Всі зміни цієї сесії редагування будуть відкинуті.')
         $menu.append($cancelButton)
         $menu.append($('<span> · </span>'))
 
         $resetButton = $('<span class="menuButton">')
-        $resetButton.text('відновити звичаєві').click(@onResetClick)
+        $resetButton.text('відновити звичаєві').click(@onResetClick).attr('title', 'Буде відновлено набір символів за промовчанням.')
         $menu.append($resetButton)
 
       @$container.append($menu)
@@ -647,6 +656,8 @@ class rast.Drawer
     # [для режиму редагування] список ґудзиків, які можна створювати. Перетягуються мишкою.
     drawSlotClasses: ($outline)->
       $slots = $('<div class="slotClasses">')
+      $hint = $('<div title="Щоб створити комірку, перетягніть потрібний вид в область редагування (область редагування обведена штриховим обідком).">Види комірок:</div>')  
+      $slots.append($hint)
       for slotClass in @slotClasses
         $slot = $('<div class="slotClass">')
         $slot.attr('data-slot-class', rast.name(slotClass))
@@ -677,11 +688,29 @@ class rast.Drawer
 
     draw: (options)->
       @activeTab = options.activeTab
-      mw.loader.using ['jquery.ui.sortable', 'jquery.ui.droppable', 'jquery.ui.draggable'], =>
+      @$container.find('[original-title]').each (i, elem)->
+        $(elem).tipsy?('hide')
+      mw.loader.using ['jquery.ui.sortable', 'jquery.ui.droppable', 'jquery.ui.draggable', 'jquery.tipsy'], =>
         @$container.empty()
         @drawMenu()
         @drawNavigation()
         @drawPanels()
+        $titled = @$container.find('[title]')
+        $titled.tipsy(trigger: 'manual')
+        $titled.mouseenter ->
+          $this = $(@)
+          $this.tipsy('show')
+          hideTimeout = setTimeout(
+            ->
+              $this.tipsy('hide')
+            3000  
+          )
+          $this.data('hideTimeout', hideTimeout)
+        $titled.mouseleave ->
+          $this = $(@)
+          $this.tipsy('hide')
+          hideTimeout = $this.data('hideTimeout')
+          clearTimeout(hideTimeout) if hideTimeout
 
     # власне панелі з символами
     drawPanels: ->
@@ -690,7 +719,7 @@ class rast.Drawer
       i = 0
       while i < @subsets.subsets.length
         $subset = @drawPanel(@subsets.subsets[i], i)
-        $subsetDiv = $('<div>').attr('id', 'etTabContent' + i).attr('data-id', @subsets.subsets[i].id).appendTo($content).addClass('asnav-content').attr('title', 'Клацніть, щоб вставити символи у вікно редагування').append($subset)
+        $subsetDiv = $('<div>').attr('id', 'etTabContent' + i).attr('data-id', @subsets.subsets[i].id).appendTo($content).addClass('asnav-content').append($subset)
         i++
       @$container.etMakeTabs(true)
       @$container.append($('<div>').css('clear', 'both'))
@@ -700,7 +729,6 @@ class rast.Drawer
       $panel = $('<div>').attr('id', 'spchars-' + index).addClass('etPanel')
 
       if @mode == 'edit'
-        $panel.attr('title', 'Клацніть, щоб змінити комірку. Комірки можна перетягувати.')
         # поле вводу для назви панелі
         $nameLabel = $('<label class="panelNameLabel">Назва:</label>')
         $nameInputContainer = $('<div>')
@@ -985,9 +1013,7 @@ class rast.SubsetsManager
       @insertOrAppend(subset.slots, index, slot)
 
     deleteSlot: (slotId)->
-      console.log typeof slotId
       return unless (typeof slotId == 'number')
-      console.log 'deleting...'
       slot = @slotById(slotId)
       slotIndex = @slotIndex(slot)
       subset = @subsetBySlot(slot)
@@ -1478,7 +1504,6 @@ $ ->
     onDeleteSlot: (slotId)->
       id = parseInt(slotId)
       @temporarySubsets.deleteSlot(id)
-      console.log @temporarySubsets.slotById(id)
       @refresh()
 
     edit: ->
