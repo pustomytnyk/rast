@@ -8,7 +8,7 @@ window.rast =
   $getTextarea: ->
     $('#wpTextbox1')
 
-  $getCurrentInput: ->  
+  $getCurrentInput: ->
     $(document.activeElement)
 
   insertion: {
@@ -43,11 +43,11 @@ window.rast =
           index = i
           break
         i++
-      index  
+      index
   }
 
   installJQueryPlugins: ->
-    $.fn.extend 
+    $.fn.extend
       asnavSelect: (id) ->
         $tabs = $(this)
         $tabs.find('.asnav-content').hide()
@@ -708,7 +708,7 @@ class rast.Drawer
         $nameInput = $('<input type="text">').val(subsetWrapper.caption)
         $nameInput.change({ subsetWrapper: subsetWrapper }, @onTabNameChanged)
         $nameInputContainer.append($nameInput)
-        
+
         $nameInputContainer.appendTo($panel)
 
         $panelRemoveButton = $('<span class="panelRemoveButton">Вилучити панель</span>')
@@ -751,7 +751,7 @@ class rast.Drawer
 
         if !subsetWrapper.slots.length
           $slots.append('<span>Щоб додати комірку, сюди перетягніть потрібний вид з бічної панелі.</span>')
-        else  
+        else
           @generateHtml($slots, subsetWrapper.slots, generateMethod)
         $preview = $('<div>').css('border-top', '1px solid color: #aaa').addClass('preview')
         $preview.append($('<div>Попередній перегляд:</div>'))
@@ -809,7 +809,7 @@ class rast.PlainObjectParser
       slots = []
       slot = new rast.MultipleInsertionsSlot(insertion: str)
       slots.push(slot)
-      slots  
+      slots
 
     @lineReplace: (c) ->
       if c == '/'
@@ -971,7 +971,7 @@ class rast.SubsetsManager
       }
       @insertOrAppend(@subsets, index, subset)
 
-    removeSubset: (subsetToBeRemoved)  ->
+    deleteSubset: (subsetToBeRemoved)  ->
       @subsets = $.grep(@subsets, (subset, index)->
         subsetToBeRemoved.id != subset.id
       )
@@ -985,11 +985,13 @@ class rast.SubsetsManager
       @insertOrAppend(subset.slots, index, slot)
 
     deleteSlot: (slotId)->
-      return unless (typeof slotId == 'Number')
+      console.log typeof slotId
+      return unless (typeof slotId == 'number')
+      console.log 'deleting...'
       slot = @slotById(slotId)
       slotIndex = @slotIndex(slot)
       subset = @subsetBySlot(slot)
-      subset.slots.splice(slotIndex, 1);
+      subset.slots.splice(slotIndex, 1)
 
     uniqueSlotId: ->
       result = @slotId
@@ -1090,7 +1092,9 @@ class rast.UIwindow
   # генерує поля для редагування символа. Для цього кожен клас символів має властивість editableAttributes.
 class rast.SlotAttributesEditor
 
-    constructor: (@slot)->
+    constructor: (options)->
+      @slot = options.slot
+      @slotsManager = options.slotsManager
 
     startEditing: ->
       slot = @slot
@@ -1157,16 +1161,19 @@ class rast.SlotAttributesEditor
 
       $content.append(cancelButton.$element)
 
+      removeButton = new OO.ui.ButtonWidget(icon: 'remove', label: 'Вилучити')
+      removeButton.on 'click', =>
+        @slotsManager.onDeleteSlot?(slot.id)
+        dialog.close()
+
+      $content.append(removeButton.$element)
+
   # символ
 class rast.Slot
 
     @editableAttributes: []
 
     @editorClass: rast.SlotAttributesEditor
-
-    editWindow: ->
-      editor = new @constructor.editorClass(@)
-      editor.startEditing()
 
     constructor: (options = {}) ->
       for attribute in @constructor.editableAttributes
@@ -1286,7 +1293,7 @@ class rast.InsertionSlot extends rast.Slot
         event.preventDefault()
         if @useClickFunc
           eval('(' + @clickFunc + ')()')
-        else  
+        else
           rast.InsertionSlot.insertFunc(@insertion)
       $elem
 
@@ -1409,7 +1416,7 @@ $ ->
     extraCSS: '''#edittools .etPanel [data-id] { padding: 0px 2px; content: " "; display: inline-block; } \
     #edittools { min-height: 20px; } 
     #edittools .rastMenu.view { position: absolute; left: 0px; } 
-    #edittools .rastMenu.edit { border-bottom: solid #aaaaaa 1px; padding: 2px 6px; margin-bottom: 4px; } 
+    #edittools .rastMenu.edit { border-bottom: solid #aaaaaa 1px; padding: 2px 6px; } 
     #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; margin: 5px 0px; } 
     #edittools .slots.ui-sortable .emptyHint {  } 
     #edittools .editedSlot { cursor: pointer; min-width: 1em; min-height: 1em; border: 1px solid black; margin-left: -1px; position: relative; } 
@@ -1461,8 +1468,18 @@ $ ->
         if EditTools.mode == 'edit'
           id = parseInt($(this).closest('.editedSlot').attr('data-id'))
           slot = EditTools.temporarySubsets.slotById(id)
-          slot.editWindow()
+          EditTools.editWindow(slot)
       $tabs
+
+    editWindow: (slot)->
+      editor = new slot.constructor.editorClass(slot: slot, slotsManager: @)
+      editor.startEditing()
+
+    onDeleteSlot: (slotId)->
+      id = parseInt(slotId)
+      @temporarySubsets.deleteSlot(id)
+      console.log @temporarySubsets.slotById(id)
+      @refresh()
 
     edit: ->
       @mode = 'edit'
@@ -1541,7 +1558,7 @@ $ ->
           @refresh()
           $tabs.asnavSelect('etTabContent' + subset.id)
         onRemoveSubsetClick: (subsetWrapper)=>
-          @temporarySubsets.removeSubset(subsetWrapper)
+          @temporarySubsets.deleteSubset(subsetWrapper)
           @refresh()
         onSlotAdded: =>
           @refresh()
@@ -1611,4 +1628,3 @@ $ ->
   mw.loader.using ['mediawiki.cookie', 'oojs-ui', 'jquery.ui.droppable'], ->
     rast.installJQueryPlugins()
     EditTools.init()
-
