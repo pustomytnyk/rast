@@ -1,4 +1,6 @@
-window.$ = unsafeWindow.$ if unsafeWindow? # для Tampermonkey
+if unsafeWindow? # для Tampermonkey
+  window.$ = unsafeWindow.$
+  window.etSubsets = unsafeWindow.etSubsets
 
 Array.prototype.rastMove = (from, to)->
   @splice(to, 0, @splice(from, 1)[0]);
@@ -1519,11 +1521,14 @@ $ ->
       @onloadFuncs = []
       @subsets.reset()
 
-    readFromEtSubsets: ->
+    readFromSpecialSyntaxObject: (obj)->
+      console.log obj
+      return false unless obj
       @reset()
-      @subsets.readEncodedSubsets(rast.defaultSubsets)
+      @subsets.readEncodedSubsets(obj)
       @subsetsUpdated()
       @refresh()
+      true
 
     subsetsUpdated: ->
       @temporarySubsets = rast.clone(@subsets, false)
@@ -1554,7 +1559,7 @@ $ ->
 
     restoreDefaults: ->
       rast.setDefaultSubsets()
-      @readFromEtSubsets()
+      @readFromSpecialSyntaxObject(rast.defaultSubsets)
 
     setup: ->
       @subsets = new rast.SubsetsManager
@@ -1571,8 +1576,7 @@ $ ->
           @undoChanges()
           @view()
         onResetClick: =>
-          rast.setDefaultSubsets()
-          @readFromEtSubsets()
+          @restoreDefaults()
         onEditClick: =>
           @edit()
         onTabNameChanged: (event)=>
@@ -1615,8 +1619,9 @@ $ ->
       @drawer.$editButton().prop('outerHTML')
 
     onSubpageNotFound: ->
-      $warning = $("<div class=\"notFoundWarning\">Підсторінку із символами не знайдено або не вдалося завантажити. Це нормально, якщо ви ще не зберегли жодну версію. Натисніть #{ @editButtonHtml() }, щоб редагувати символи.</div>")
-      $('#' + @id).append($warning)
+      unless @readFromSpecialSyntaxObject(unsafeWindow.etSubsets)
+        $warning = $("<div class=\"notFoundWarning\">Підсторінку із символами не знайдено або не вдалося завантажити. Це нормально, якщо ви ще не зберегли жодну версію. Натисніть #{ @editButtonHtml() }, щоб редагувати символи.</div>")
+        $('#' + @id).append($warning)
 
     init: ->
       if mw.config.get('wgAction') == 'edit' or mw.config.get('wgAction') == 'submit'
