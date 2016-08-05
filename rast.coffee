@@ -50,8 +50,24 @@ window.rast =
 
   installJQueryPlugins: ->
     $.fn.extend
+      throbber: (visibility, position, size)->
+        $elem = $(@)
+        $throbber = $elem.data('rastThrobber')
+        if $throbber
+          $throbber.toggle(visibility)
+        else
+          size = size || '20px'
+          $throbber = $('<img>')
+          $throbber.attr('src', 'https://upload.wikimedia.org/wikipedia/commons/d/de/Ajax-loader.gif')
+          $throbber.css('width', size)
+          $throbber.css('height', size)
+          $elem.data('rastThrobber', $throbber)
+          $elem[position]($throbber)
+          $elem.addClass('withRastThrobber')
+        $elem  
+
       asnavSelect: (id) ->
-        $tabs = $(this)
+        $tabs = $(@)
         $tabs.find('.asnav-content').hide()
         $tabs.find('.asnav-tabs .asnav-selectedtab').removeClass('asnav-selectedtab')
         tabContent = $tabs.find('.asnav-tabs [data-contentid="' + id + '"]:first')
@@ -673,28 +689,13 @@ class rast.Drawer
         helper: 'clone'
         # revert: 'invalid'
 
-    constructor: (options)->
-      @$container = options.$container
-      @onTabClick = options.onTabClick
-      @onSaveClick = options.onSaveClick
-      @onCancelClick = options.onCancelClick
-      @onEditClick = options.onEditClick
-      @onResetClick = options.onResetClick
-      @onTabNameChanged = options.onTabNameChanged
-      @onAddSubsetClick = options.onAddSubsetClick
-      @onRemoveSubsetClick = options.onRemoveSubsetClick
-      @onSlotAdded = options.onSlotAdded
-      @onPersistClick = options.onPersistClick
-      @onSlotRemoved = options.onSlotRemoved
-      @slotClasses = options.slotClasses
-
-    draw: (options)->
-      @activeTab = options.activeTab
+    draw: ->
       @$container.find('[original-title]').each (i, elem)->
         $(elem).tipsy?('hide')
       mw.loader.using ['jquery.ui.sortable', 'jquery.ui.droppable', 'jquery.ui.draggable', 'jquery.tipsy'], =>
         @$container.empty()
         @drawMenu()
+        @drawMessage()
         @drawNavigation()
         @drawPanels()
         $titled = @$container.find('[title]')
@@ -713,6 +714,9 @@ class rast.Drawer
           $this.tipsy('hide')
           hideTimeout = $this.data('hideTimeout')
           clearTimeout(hideTimeout) if hideTimeout
+
+    drawMessage: ->
+      @$container.append(@message)
 
     # власне панелі з символами
     drawPanels: ->
@@ -1289,6 +1293,11 @@ class rast.InsertionSlot extends rast.Slot
       tags = rast.PlainObjectParser.parseInsertion(insertion, '')
       rast.$getTextarea().insertTag(tags.tagOpen, tags.tagClose)
 
+    toJSON: ->
+      copy = rast.clone(@)
+      copy.clickFunc = @clickFunc.toString() if @clickFunc
+      copy
+
     generateEditHtml: ->
       $elem = @generateCommonHtml()
       $elem.addClass('editedSlot')
@@ -1396,7 +1405,7 @@ class rast.HtmlSlot extends rast.Slot
 
 class rast.PageStorage
 
-  @load: (pagename, onLoaded, onNotFound)->
+  @load: (pagename, onLoaded, handler)->
     mw.loader.using 'mediawiki.api.edit', ->
         api = new (mw.Api)
         api.get(
@@ -1404,12 +1413,19 @@ class rast.PageStorage
           prop: 'revisions'
           rvprop: 'content'
           titles: pagename
-        ).done (data) ->
+        ).done((data) ->
          for pageId of data.query.pages
            if data.query.pages[pageId].revisions
              onLoaded?(data.query.pages[pageId].revisions[0]['*'])
            else
-             onNotFound?(pageId)
+             handler.onSubpageNotFound?(pageId)
+        ).fail(
+          -> 
+            handler.onReadFromSubpageError()
+        ).always(
+          -> 
+            handler.onEndReadingSubpage()
+        )
 
   @save: (pagename, string)->
     mw.loader.using 'mediawiki.api.edit', ->
@@ -1522,7 +1538,6 @@ $ ->
       @subsets.reset()
 
     readFromSpecialSyntaxObject: (obj)->
-      console.log obj
       return false unless obj
       @reset()
       @subsets.readEncodedSubsets(obj)
@@ -1546,7 +1561,9 @@ $ ->
       @drawer.$container = $tabs
       @drawer.mode = @mode
       @drawer.subsets = @temporarySubsets
-      @drawer.draw({ activeTab: etActiveTab })
+      @drawer.message = @message
+      @drawer.activeTab = @etActiveTab
+      @drawer.draw()
 
       @fireOnloadFuncs()
       $tabs.on 'asNav:select', (ev, selectedId) ->
@@ -1568,35 +1585,39 @@ $ ->
       $tabs = $('#' + @id)
       etActiveTab = $tabs.find('.existingTabs .asnav-selectedtab').attr('data-contentid') || mw.cookie.get(EditTools.cookieName + 'Selected') or 'etTabContent0'
 
-      @drawer = new rast.Drawer(
-        onTabClick: null,
-        onSaveClick: =>
-          @save()
-        onCancelClick: =>
-          @undoChanges()
-          @view()
-        onResetClick: =>
-          @restoreDefaults()
-        onEditClick: =>
-          @edit()
-        onTabNameChanged: (event)=>
-          event.data.subsetWrapper.caption = $(event.target).val()
-          @refresh()
-        onAddSubsetClick: =>
-          subset = @temporarySubsets.addSubset('Нова панель', @temporarySubsets.subsets.length)
-          @refresh()
-          $tabs.asnavSelect('etTabContent' + subset.id)
-        onRemoveSubsetClick: (subsetWrapper)=>
-          @temporarySubsets.deleteSubset(subsetWrapper)
-          @refresh()
-        onSlotAdded: =>
-          @refresh()
-        onPersistClick: =>
-          @save()
-          @saveToSubpage()
-        onSlotRemoved: =>
-          @refresh()
-        slotClasses: [rast.PlainTextSlot, rast.InsertionSlot, rast.MultipleInsertionsSlot, rast.HtmlSlot]
+      @drawer = new rast.Drawer()
+      $.extend(
+        @drawer
+        {
+          onTabClick: null,
+          onSaveClick: =>
+            @save()
+          onCancelClick: =>
+            @undoChanges()
+            @view()
+          onResetClick: =>
+            @restoreDefaults()
+          onEditClick: =>
+            @edit()
+          onTabNameChanged: (event)=>
+            event.data.subsetWrapper.caption = $(event.target).val()
+            @refresh()
+          onAddSubsetClick: =>
+            subset = @temporarySubsets.addSubset('Нова панель', @temporarySubsets.subsets.length)
+            @refresh()
+            $tabs.asnavSelect('etTabContent' + subset.id)
+          onRemoveSubsetClick: (subsetWrapper)=>
+            @temporarySubsets.deleteSubset(subsetWrapper)
+            @refresh()
+          onSlotAdded: =>
+            @refresh()
+          onPersistClick: =>
+            @save()
+            @saveToSubpage()
+          onSlotRemoved: =>
+            @refresh()
+          slotClasses: [rast.PlainTextSlot, rast.InsertionSlot, rast.MultipleInsertionsSlot, rast.HtmlSlot]
+        }
       )
 
       $placeholder = $(@parentId)
@@ -1611,17 +1632,20 @@ $ ->
       @reload()
 
     reload: ->
-      @readFromSubpage(=>
-        @onSubpageNotFound()
-      )
+      $tabs = $('#' + @id)
+      $tabs.throbber(true, 'prepend')
+      @readFromSubpage()
 
     editButtonHtml: ->
       @drawer.$editButton().prop('outerHTML')
 
+    showMessage: (html)->
+      @message = html
+      @refresh()
+
     onSubpageNotFound: ->
       unless @readFromSpecialSyntaxObject(unsafeWindow.etSubsets)
-        $warning = $("<div class=\"notFoundWarning\">Підсторінку із символами не знайдено або не вдалося завантажити. Це нормально, якщо ви ще не зберегли жодну версію. Натисніть #{ @editButtonHtml() }, щоб редагувати символи.</div>")
-        $('#' + @id).append($warning)
+        @showMessage("<div class=\"notFoundWarning\">Підсторінку із символами не знайдено або не вдалося завантажити. Це нормально, якщо ви ще не зберегли жодну версію. Натисніть #{ @editButtonHtml() }, щоб редагувати символи.</div>")
 
     init: ->
       if mw.config.get('wgAction') == 'edit' or mw.config.get('wgAction') == 'submit'
@@ -1639,17 +1663,27 @@ $ ->
       serializedTools = "<nowiki>#{ @serialize() }</nowiki>"
       rast.PageStorage.save(pagename, serializedTools)
 
-    readFromSubpage: (onNotFound) ->
+    readFromSubpage: ->
       @reset()
-      json = rast.PageStorage.load('User:' + mw.config.values.wgUserName + '/' + @subpageStorageName,
+      json = rast.PageStorage.load(
+        'User:' + mw.config.values.wgUserName + '/' + @subpageStorageName,
         (pagetext)=>
           pagetextWithoutNowiki = pagetext.replace(/^<nowiki>/, '').replace(/<\/nowiki>$/, '')
           serializedTools = JSON.parse(pagetextWithoutNowiki)
           @subsets.deserialize(serializedTools)
           @subsetsUpdated()
           @refresh()
-        onNotFound
+        ,  
+        @
       )
+
+    onReadFromSubpageError: ->
+      @showMessage("<div class=\"readingSubpageError\">Не вдалося завантажити підсторінку з символами.</div>")
+
+    onEndReadingSubpage: ->
+      $tabs = $('#' + @id)
+      $tabs.throbber(false)
+
   # end EditTools
 
   rast.PlainObjectParser.processShortcut = EditTools.processShortcut;
