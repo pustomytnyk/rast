@@ -1337,7 +1337,7 @@ class rast.MultipleInsertionsSlot extends rast.Slot
         { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
       ]
       functionality: [
-        { name: 'insertion', caption: 'Напис', type: 'text', default: 'вставка_1 ·п вставка_2' }
+        { name: 'insertion', caption: 'Вставки', type: 'text', default: 'вставка_1 ·п вставка_2' }
       ]
     })
 
