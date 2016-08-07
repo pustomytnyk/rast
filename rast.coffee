@@ -1127,14 +1127,13 @@ class rast.SlotAttributesEditor
     constructor: (options)->
       @slot = options.slot
       @slotsManager = options.slotsManager
+      @allInputs = []
 
-    startEditing: ->
-      slot = @slot
-      slotClass = slot.constructor
+    fieldsetForAttrs: (fieldsetName, attrs)->
       inputs = []
 
-      for attribute in slotClass.editableAttributes
-        value = slot[attribute.name]
+      for attribute in attrs
+        value = @slot[attribute.name]
         type = attribute.type
         OOinput =
           if type == 'string' || type == 'text'
@@ -1152,12 +1151,15 @@ class rast.SlotAttributesEditor
               })
             }
 
-        inputs.push({ attribute: attribute.name, label: attribute.caption, input: OOinput.OOobject, getValueFunc: OOinput.getValue }) if OOinput
+        inputData = { attribute: attribute.name, label: attribute.caption, input: OOinput.OOobject, getValueFunc: OOinput.getValue }
+        if OOinput
+          @allInputs.push(inputData)
+          inputs.push(inputData) 
 
       # Create a Fieldset layout.
       fieldset = new OO.ui.FieldsetLayout( {
-        label: 'Редагування комірки'
-      } );
+        label: fieldsetName
+      } )
 
       # Add field layouts that contain the form elements to the fieldset. Items can also be specified
       # with the FieldsetLayout's 'items' config option:
@@ -1169,10 +1171,19 @@ class rast.SlotAttributesEditor
         } )
       )
 
-      fieldset.addItems(fields);
+      fieldset.addItems(fields)
+      fieldset
 
+    startEditing: ->
+      slotClass = @slot.constructor
+      attrs = slotClass.editableAttributes
       $content = $('<div class="rastSpecialChars">')
-      $content.append(fieldset.$element)
+      if attrs.view
+        fieldset = @fieldsetForAttrs('Вигляд', attrs.view)
+        $content.append(fieldset.$element)
+      if attrs.functionality
+        fieldset = @fieldsetForAttrs('Функціонал', attrs.functionality)
+        $content.append(fieldset.$element)  
 
       panel = new OO.ui.PanelLayout( { $: $, padded: true, expanded: false } );
       panel.$element.append($content)
@@ -1180,9 +1191,9 @@ class rast.SlotAttributesEditor
       dialog = rast.UIwindow.show(panel.$element)
 
       saveButton = new OO.ui.ButtonWidget(icon: 'check', label: 'Зберегти')
-      saveButton.on 'click', ->
-        for inputWrapper in inputs
-          slot[inputWrapper.attribute] = inputWrapper.input[inputWrapper.getValueFunc]()
+      saveButton.on 'click', =>
+        for inputWrapper in @allInputs
+          @slot[inputWrapper.attribute] = inputWrapper.input[inputWrapper.getValueFunc]()
         EditTools.refresh()
         dialog.close()
       $content.append(saveButton.$element)
@@ -1195,20 +1206,30 @@ class rast.SlotAttributesEditor
 
       removeButton = new OO.ui.ButtonWidget(icon: 'remove', label: 'Вилучити')
       removeButton.on 'click', =>
-        @slotsManager.onDeleteSlot?(slot.id)
+        @slotsManager.onDeleteSlot?(@slot.id)
         dialog.close()
 
       $content.append(removeButton.$element)
 
-  # символ
+class rast.SlotAttributes
+
+  constructor: (attrsObj)->
+    $.extend(@, attrsObj)
+
+  toArray: ->
+    result = []
+    result = result.concat(@view) if @view
+    result = result.concat(@functionality) if @functionality
+    result
+
 class rast.Slot
 
-    @editableAttributes: []
+    @editableAttributes: new rast.SlotAttributes({})
 
     @editorClass: rast.SlotAttributesEditor
 
     constructor: (options = {}) ->
-      for attribute in @constructor.editableAttributes
+      for attribute in @constructor.editableAttributes.toArray()
         @[attribute.name] = attribute.default
       $.extend @, options, 'class': 'rast.' + @constructor.name
 
@@ -1221,11 +1242,14 @@ class rast.PlainTextSlot extends rast.Slot
 
     @caption: 'Простий текст'
 
-    @editableAttributes: [
-      { name: 'bold', type: 'boolean', default: false, caption: 'Жирний' }
-      { name: 'italic', type: 'boolean', default: false, caption: 'Похилий' }
-      { name: 'text', type: 'string', default: 'текст', caption: 'Текст' }
-    ]
+    @editableAttributes: new rast.SlotAttributes({ view: 
+      [
+        { name: 'bold', type: 'boolean', default: false, caption: 'Жирний' }
+        { name: 'italic', type: 'boolean', default: false, caption: 'Похилий' }
+        { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
+        { name: 'text', type: 'string', default: 'текст', caption: 'Текст' }
+      ]
+    })
 
     generateHtml: ->
       $elem = $('<span>')
@@ -1237,56 +1261,24 @@ class rast.PlainTextSlot extends rast.Slot
         $elem.css('font-style', 'italic')
       $elem
 
-
-class rast.LinkSlot extends rast.Slot
-
-    @caption: 'Посилання'
-
-    generateEditHtml: ->
-      $a = @generateCommonHtml()
-      $a.addClass('editedSlot')
-
-    generateCommonHtml: ->
-      $a = $('<a>')
-      $a.attr('data-id', @id)
-      caption = $('<div/>').text(@caption).html()
-      $a.html(caption)
-      if @bold
-        $a.css('font-weight', 'bold')
-      if @italic
-        $a.css('font-style', 'italic')
-      $a
-
-    generateHtml: ->
-      $a = @generateCommonHtml()
-      $a.click (event)=>
-        event.preventDefault()
-        @func.apply($(event.target))
-      $a
-
-    toJSON: ->
-      copy = rast.clone(@)
-      copy.func = @func.toString() if @func
-      copy
-
-    constructor: (options = {}) ->
-      super(options)
-      if @func
-        @func = eval('(' + @func + ')')
-
 class rast.InsertionSlot extends rast.Slot
 
     @caption: 'Одна вставка'
 
-    @editableAttributes: [
-      { name: 'bold', caption: 'Жирний', type: 'boolean', default: false }
-      { name: 'italic', caption: 'Похилий', type: 'boolean', default: false }
-      { name: 'caption', caption: 'Напис', type: 'text', default: 'Нова вставка' }
-      { name: 'captionAsHtml', caption: 'Сприймати напис, як html-код?', type: 'boolean', default: false }
-      { name: 'insertion', caption: 'Текст вставки', type: 'text', default: '$' }
-      { name: 'useClickFunc', caption: 'Замість вставляння виконати іншу дію?', type: 'boolean', default: false }
-      { name: 'clickFunc', caption: 'Інша дія (при клацанні)', type: 'text', default: 'function(){  }' }
-    ]
+    @editableAttributes: new rast.SlotAttributes({
+      view: [
+        { name: 'bold', caption: 'Жирний', type: 'boolean', default: false }
+        { name: 'italic', caption: 'Похилий', type: 'boolean', default: false }
+        { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
+        { name: 'caption', caption: 'Напис', type: 'text', default: 'Нова вставка' }
+        { name: 'captionAsHtml', caption: 'Сприймати напис, як html-код?', type: 'boolean', default: false }
+      ]
+      functionality: [
+        { name: 'insertion', caption: 'Текст вставки', type: 'text', default: '$' }
+        { name: 'useClickFunc', caption: 'Замість вставляння виконати іншу дію?', type: 'boolean', default: false }
+        { name: 'clickFunc', caption: 'Інша дія (при клацанні)', type: 'text', default: 'function(){  }' }        
+      ]
+    })
 
     @insertFunc = (insertion) ->
       rast.$getTextarea().focus()
@@ -1338,11 +1330,16 @@ class rast.MultipleInsertionsSlot extends rast.Slot
 
     @caption: 'Набір вставок'
 
-    @editableAttributes: [
-      { name: 'bold', caption: 'Жирний', type: 'boolean', default: false }
-      { name: 'italic', caption: 'Похилий', type: 'boolean', default: false }
-      { name: 'insertion', caption: 'Напис', type: 'text', default: 'вставка_1 ·п вставка_2' }
-    ]
+    @editableAttributes: new rast.SlotAttributes({
+      view: [
+        { name: 'bold', caption: 'Жирний', type: 'boolean', default: false }
+        { name: 'italic', caption: 'Похилий', type: 'boolean', default: false }
+        { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
+      ]
+      functionality: [
+        { name: 'insertion', caption: 'Напис', type: 'text', default: 'вставка_1 ·п вставка_2' }
+      ]
+    })
 
     @insertFunc = (insertion) ->
       rast.$getTextarea().focus()
@@ -1377,10 +1374,14 @@ class rast.HtmlSlot extends rast.Slot
 
     @caption: 'Довільний код'
 
-    @editableAttributes: [
-      { name: 'html', type: 'text', default: '<span>html</span>', caption: 'HTML' }
-      { name: 'onload', type: 'text', default: 'function(){  }', caption: 'JavaScript, що виконається при ініціалізації' }
-    ]
+    @editableAttributes: new rast.SlotAttributes({ 
+      view: [
+        { name: 'html', type: 'text', default: '<span>html</span>', caption: 'HTML' }
+      ]
+      functionality: [
+        { name: 'onload', type: 'text', default: 'function(){  }', caption: 'JavaScript, що виконається при ініціалізації' }
+      ]
+    })
 
     toJSON: ->
       copy = rast.clone(@)
