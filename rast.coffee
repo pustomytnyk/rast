@@ -64,7 +64,7 @@ window.rast =
           $elem.data('rastThrobber', $throbber)
           $elem[position]($throbber)
           $elem.addClass('withRastThrobber')
-        $elem  
+        $elem
 
       asnavSelect: (id) ->
         $tabs = $(@)
@@ -674,7 +674,7 @@ class rast.Drawer
     # [для режиму редагування] список ґудзиків, які можна створювати. Перетягуються мишкою.
     drawSlotClasses: ($outline)->
       $slots = $('<div class="slotClasses">')
-      $hint = $('<div title="Щоб створити комірку, перетягніть потрібний вид в область редагування (область редагування обведена штриховим обідком).">Види комірок:</div>')  
+      $hint = $('<div title="Щоб створити комірку, перетягніть потрібний вид в область редагування (область редагування обведена штриховим обідком).">Види комірок:</div>')
       $slots.append($hint)
       for slotClass in @slotClasses
         $slot = $('<div class="slotClass">')
@@ -706,7 +706,7 @@ class rast.Drawer
           hideTimeout = setTimeout(
             ->
               $this.tipsy('hide')
-            3000  
+            3000
           )
           $this.data('hideTimeout', hideTimeout)
         $titled.mouseleave ->
@@ -1137,7 +1137,7 @@ class rast.SlotAttributesEditor
         type = attribute.type
         OOinput =
           if type == 'string' || type == 'text'
-            fieldOptions = { value: value, multiline: type == 'text' }
+            fieldOptions = { value: value, multiline: type == 'text', rows: 3, autosize: true }
             {
               getValue: 'getValue',
               OOobject: new OO.ui.TextInputWidget(fieldOptions)
@@ -1151,10 +1151,16 @@ class rast.SlotAttributesEditor
               })
             }
 
-        inputData = { attribute: attribute.name, label: attribute.caption, input: OOinput.OOobject, getValueFunc: OOinput.getValue }
+        inputData = {
+          attribute: attribute.name,
+          label: attribute.caption
+          input: OOinput.OOobject
+          getValueFunc: OOinput.getValue
+          labelAlignment: attribute.labelAlignment || 'left'
+        }
         if OOinput
           @allInputs.push(inputData)
-          inputs.push(inputData) 
+          inputs.push(inputData)
 
       # Create a Fieldset layout.
       fieldset = new OO.ui.FieldsetLayout( {
@@ -1167,8 +1173,8 @@ class rast.SlotAttributesEditor
       fields = $.map(inputs, (inputWrapper, index)->
         new OO.ui.FieldLayout(inputWrapper.input, {
           label: inputWrapper.label,
-          align: 'left'
-        } )
+          align: inputWrapper.labelAlignment
+        })
       )
 
       fieldset.addItems(fields)
@@ -1183,9 +1189,9 @@ class rast.SlotAttributesEditor
         $content.append(fieldset.$element)
       if attrs.functionality
         fieldset = @fieldsetForAttrs('Функціонал', attrs.functionality)
-        $content.append(fieldset.$element)  
+        $content.append(fieldset.$element)
 
-      panel = new OO.ui.PanelLayout( { $: $, padded: true, expanded: false } );
+      panel = new OO.ui.PanelLayout({ $: $, padded: true, expanded: false })
       panel.$element.append($content)
 
       dialog = rast.UIwindow.show(panel.$element)
@@ -1204,7 +1210,7 @@ class rast.SlotAttributesEditor
 
       $content.append(cancelButton.$element)
 
-      removeButton = new OO.ui.ButtonWidget(icon: 'remove', label: 'Вилучити')
+      removeButton = new OO.ui.ButtonWidget(icon: 'remove', label: 'Вилучити комірку')
       removeButton.on 'click', =>
         @slotsManager.onDeleteSlot?(@slot.id)
         dialog.close()
@@ -1242,19 +1248,20 @@ class rast.PlainTextSlot extends rast.Slot
 
     @caption: 'Простий текст'
 
-    @editableAttributes: new rast.SlotAttributes({ view: 
+    @editableAttributes: new rast.SlotAttributes({ view:
       [
         { name: 'bold', type: 'boolean', default: false, caption: 'Жирний' }
         { name: 'italic', type: 'boolean', default: false, caption: 'Похилий' }
         { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
-        { name: 'text', type: 'string', default: 'текст', caption: 'Текст' }
+        { name: 'text', type: 'string', default: 'текст', caption: 'Текст', labelAlignment: 'top' }
       ]
     })
 
-    generateHtml: ->
+    generateHtml: (styles)->
       $elem = $('<span>')
       $elem.text(@text)
       $elem.attr('data-id', @id)
+      $elem.attr('style', styles || @css)
       if @bold
         $elem.css('font-weight', 'bold')
       if @italic
@@ -1274,9 +1281,9 @@ class rast.InsertionSlot extends rast.Slot
         { name: 'captionAsHtml', caption: 'Сприймати напис, як html-код?', type: 'boolean', default: false }
       ]
       functionality: [
-        { name: 'insertion', caption: 'Текст вставки', type: 'text', default: '$' }
+        { name: 'insertion', caption: 'Текст вставки', type: 'text', default: '$', labelAlignment: 'top' }
         { name: 'useClickFunc', caption: 'Замість вставляння виконати іншу дію?', type: 'boolean', default: false }
-        { name: 'clickFunc', caption: 'Інша дія (при клацанні)', type: 'text', default: 'function(){  }' }        
+        { name: 'clickFunc', caption: 'Інша дія (при клацанні)', type: 'text', default: 'function(){  }', labelAlignment: 'top' }
       ]
     })
 
@@ -1294,12 +1301,13 @@ class rast.InsertionSlot extends rast.Slot
       $elem = @generateCommonHtml()
       $elem.addClass('editedSlot')
 
-    generateCommonHtml: ->
+    generateCommonHtml: (styles)->
       if @captionAsHtml
         $elem = $('<div>')
         $elem.append($('<div class="overlay">'))
         $elem.append(@caption)
         $elem.attr('data-id', @id)
+        $elem.attr('style', styles) if styles
         if @bold
           $elem.css('font-weight', 'bold')
         if @italic
@@ -1308,6 +1316,7 @@ class rast.InsertionSlot extends rast.Slot
       else
         $a = $('<a>')
         $a.attr('data-id', @id)
+        $a.attr('style', styles) if styles
         caption = $('<div/>').text(@caption).html()
         $a.html(caption)
         if @bold
@@ -1316,8 +1325,8 @@ class rast.InsertionSlot extends rast.Slot
           $a.css('font-style', 'italic')
         $a
 
-    generateHtml: ->
-      $elem = @generateCommonHtml()
+    generateHtml: (styles)->
+      $elem = @generateCommonHtml(styles || @css)
       $elem.click (event)=>
         event.preventDefault()
         if @useClickFunc
@@ -1337,7 +1346,7 @@ class rast.MultipleInsertionsSlot extends rast.Slot
         { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
       ]
       functionality: [
-        { name: 'insertion', caption: 'Вставки', type: 'text', default: 'вставка_1 ·п вставка_2' }
+        { name: 'insertion', caption: 'Вставки', type: 'text', default: 'вставка_1 ·п вставка_2', labelAlignment: 'top' }
       ]
     })
 
@@ -1350,36 +1359,37 @@ class rast.MultipleInsertionsSlot extends rast.Slot
       $elem = @generateCommonHtml()
       $elem.addClass('editedSlot')
 
-    generateCommonHtml: ->
+    generateCommonHtml: (styles)->
       slots = rast.PlainObjectParser.slotsFromStr(@insertion)
       $elem = $('<div>')
       $elem.append($('<div class="overlay">'))
       $elem.attr('data-id', @id)
+      $elem.attr('style', styles) if styles
       if @bold
         $elem.css('font-weight', 'bold')
       if @italic
         $elem.css('font-style', 'italic')
 
       for slot in slots
-        $slot = $(slot.generateHtml())
+        $slot = $(slot.generateHtml(styles))
         $elem.append($slot)
 
       $elem
 
-    generateHtml: ->
-      $elem = @generateCommonHtml()
+    generateHtml: (styles)->
+      $elem = @generateCommonHtml(styles || @css)
       $elem
 
 class rast.HtmlSlot extends rast.Slot
 
     @caption: 'Довільний код'
 
-    @editableAttributes: new rast.SlotAttributes({ 
+    @editableAttributes: new rast.SlotAttributes({
       view: [
-        { name: 'html', type: 'text', default: '<span>html</span>', caption: 'HTML' }
+        { name: 'html', type: 'text', default: '<span>html</span>', caption: 'HTML', labelAlignment: 'top' }
       ]
       functionality: [
-        { name: 'onload', type: 'text', default: 'function(){  }', caption: 'JavaScript, що виконається при ініціалізації' }
+        { name: 'onload', type: 'text', default: 'function(){  }', caption: 'JavaScript, що виконається при ініціалізації', labelAlignment: 'top' }
       ]
     })
 
@@ -1421,10 +1431,10 @@ class rast.PageStorage
            else
              handler.onSubpageNotFound?(pageId)
         ).fail(
-          -> 
+          ->
             handler.onReadFromSubpageError()
         ).always(
-          -> 
+          ->
             handler.onEndReadingSubpage()
         )
 
@@ -1674,7 +1684,7 @@ $ ->
           @subsets.deserialize(serializedTools)
           @subsetsUpdated()
           @refresh()
-        ,  
+        ,
         @
       )
 
