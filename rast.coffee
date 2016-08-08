@@ -1,3 +1,4 @@
+
 if unsafeWindow? # для Tampermonkey
   window.$ = unsafeWindow.$
   window.etSubsets = unsafeWindow.etSubsets
@@ -321,15 +322,12 @@ window.rast =
     replaceFormInit: ->
       rast.searchAndReplace.offset = 0
       rast.searchAndReplace.matchIndex = 0
-      $(document).on 'click', '#et-tool-replace-button-findnext', (e) ->
+      $(document).off('click', '#et-tool-replace-button-findnext').on 'click', '#et-tool-replace-button-findnext', (e) ->
         rast.searchAndReplace.doSearchReplace 'find'
-        return
-      $(document).on 'click', '#et-tool-replace-button-replace', (e) ->
+      $(document).off('click', '#et-tool-replace-button-replace').on 'click', '#et-tool-replace-button-replace', (e) ->
         rast.searchAndReplace.doSearchReplace 'replace'
-        return
-      $(document).on 'click', '#et-tool-replace-button-replaceall', (e) ->
+      $(document).off('click', '#et-tool-replace-button-replaceall').on 'click', '#et-tool-replace-button-replaceall', (e) ->
         rast.searchAndReplace.doSearchReplace 'replaceAll'
-        return
       $('#et-replace-nomatch, #et-replace-success,\u0009\u0009\u0009 #et-replace-emptysearch, #et-replace-invalidregex').hide()
 
     doSearchReplace: (mode) ->
