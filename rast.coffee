@@ -1254,7 +1254,7 @@ class rast.PlainTextSlot extends rast.Slot
     @editableAttributes: new rast.SlotAttributes({ view:
       [
         { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
-        { name: 'text', type: 'string', default: 'текст', caption: 'Текст', labelAlignment: 'top' }
+        { name: 'text', type: 'text', default: 'текст', caption: 'Текст', labelAlignment: 'top' }
       ]
     })
 
@@ -1435,14 +1435,24 @@ class rast.PageStorage
             handler.onEndReadingSubpage()
         )
 
-  @save: (pagename, string)->
+  @save: (pagename, string, handler)->
     mw.loader.using 'mediawiki.api.edit', ->
         api = new (mw.Api)
-        api.postWithEditToken
+        api.postWithEditToken(
           action: 'edit'
           title: pagename
           summary: '[[Обговорення користувача:AS/rast.js|serialize]]'
           text: string
+        ).done(
+          ->
+            handler.onSavedToSubpage()
+        ).fail(
+          ->
+            handler.onSaveToSubpageError()
+        ).always(
+          ->
+            handler.onEndSavingToSubpage()
+        )
 
 $ ->
   window.EditTools =
@@ -1626,6 +1636,8 @@ $ ->
             @refresh()
           onPersistClick: =>
             @save()
+            $tabs = $('#' + @id)
+            $tabs.throbber(true, 'prepend')
             @saveToSubpage()
           onSlotRemoved: =>
             @refresh()
@@ -1668,12 +1680,19 @@ $ ->
 
     serializeToPage: (pagename) ->
       serializedTools = "<nowiki>#{ @serialize() }</nowiki>"
-      rast.PageStorage.save(pagename, serializedTools)
+      rast.PageStorage.save(
+        pagename,
+        serializedTools
+        @
+      )
+
+    subpageName: ->
+      'User:' + mw.config.values.wgUserName + '/' + @subpageStorageName
 
     readFromSubpage: ->
       @reset()
       json = rast.PageStorage.load(
-        'User:' + mw.config.values.wgUserName + '/' + @subpageStorageName,
+        @subpageName()
         (pagetext)=>
           pagetextWithoutNowiki = pagetext.replace(/^<nowiki>/, '').replace(/<\/nowiki>$/, '')
           serializedTools = JSON.parse(pagetextWithoutNowiki)
@@ -1690,6 +1709,19 @@ $ ->
     onEndReadingSubpage: ->
       $tabs = $('#' + @id)
       $tabs.throbber(false)
+
+    onSavedToSubpage: ->
+      pagename = @subpageName()
+      mw.notify($("<span>Збережено на <a href='#{ mw.util.getUrl(pagename) }'>#{ pagename }</a></span>"))
+
+    onSaveToSubpageError: ->
+      pagename = @subpageName()
+      mw.notify($("<span>Не вдалося зберегти на <a href='#{ mw.util.getUrl(pagename) }'>#{ pagename }</a></span>"))
+
+    onEndSavingToSubpage: ->
+      $tabs = $('#' + @id)
+      $tabs.throbber(false)      
+
 
     setupOnEditPage: ->
       if mw.config.get('wgAction') == 'edit' or mw.config.get('wgAction') == 'submit'
