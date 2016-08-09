@@ -1475,7 +1475,9 @@ $ ->
           return false
       true
     charinsertDivider: ' '
-    extraCSS: '''#edittools .etPanel [data-id] { padding: 0px 2px; content: " "; display: inline-block; margin: -1px -1px 0px 0px; } \
+    extraCSS: '''
+    #edittools .etPanel [data-id] { padding: 0px 2px; content: " "; display: inline-block; margin: -1px -1px 0px 0px; }
+    #edittools .etPanel [data-id]:hover { z-index: 1; text-decoration: none; }
     #edittools { min-height: 20px; } 
     #edittools .rastMenu.view { position: absolute; left: 0px; } 
     #edittools .rastMenu.edit { border-bottom: solid #aaaaaa 1px; padding: 2px 6px; } 
