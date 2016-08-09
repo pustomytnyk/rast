@@ -585,7 +585,7 @@ window.rast =
 
 class rast.PanelDrawer
 
-  constructor: (@$panel, @subsetWrapper, @index, @mode)->
+  constructor: (@$panel, @subsetWrapper, @index, @mode, @subsets, @onSlotAdded)->
 
   draw: ->
     if @mode == 'edit'
@@ -596,28 +596,33 @@ class rast.PanelDrawer
 
   sortableSlots: ($slots)->
     $($slots).sortable
-    items: '[data-id]'
-    start: (event, ui)->
-      copy = $(ui.item[0].outerHTML).clone()
-    placeholder: {
-      element: (copy, ui)->
-        $('<span class="ui-state-highlight">' + copy[0].innerHTML + '</li>')
-      update: ->
-    }
-    receive: (event, ui)=>
-      slotClass = eval(ui.item.attr('data-slot-class'))
-      index = $(event.target).data().sortable.currentItem.index()
-      newSlot = @subsets.addSlot(slotClass, @subsetWrapper, @index)
-      @onSlotAdded(newSlot)
-    update: (event, ui)=>
-      newSlotIndex = ui.item.index('[data-id]') - 1
-      return if newSlotIndex < 0
-      return unless $(ui.item).attr('data-id')
-      slotId = parseInt($(ui.item).attr('data-id'))
-      slot = @subsets.slotById(slotId)
-      @rearrangeSlot(slot, newSlotIndex)
-      @updatePreview
-    revert: true
+      delay: 150
+      containment: $slots
+      forceHelperSize: true
+      forcePlaceholderSize: true
+      tolerance: 'pointer'
+      items: '[data-id]'
+      start: (event, ui)->
+        copy = $(ui.item[0].outerHTML).clone()
+      placeholder: {
+        element: (copy, ui)->
+          $('<span class="ui-state-highlight">' + copy[0].innerHTML + '</li>')
+        update: ->
+      }
+      receive: (event, ui)=>
+        slotClass = eval(ui.item.attr('data-slot-class'))
+        index = $(event.target).data().sortable.currentItem.index()
+        newSlot = @subsets.addSlot(slotClass, @subsetWrapper, @index)
+        @onSlotAdded(newSlot)
+      update: (event, ui)=>
+        newSlotIndex = ui.item.index('[data-id]') - 1
+        return if newSlotIndex < 0
+        return unless $(ui.item).attr('data-id')
+        slotId = parseInt($(ui.item).attr('data-id'))
+        slot = @subsets.slotById(slotId)
+        @rearrangeSlot(slot, newSlotIndex)
+        @updatePreview()
+      revert: true
 
   drawEditMode: ->
     # поле вводу для назви панелі
@@ -661,9 +666,13 @@ class rast.PanelDrawer
       $slotsContainer.append(slot[generateMethod]())
 
   updatePreview: (subsetWrapper)->
-    $previewContent = @$container.find(".asnav-content[data-id=#{ @subsetWrapper.id }] .preview .content")
+    $previewContent = @$panel.find('.preview .content')
     $previewContent.empty()
     @generateHtml($previewContent, @subsetWrapper.slots, 'generateHtml')
+
+  rearrangeSlot: (slot, newSlotIndex)->
+    slotIndex = @subsets.slotIndex(slot)
+    @subsetWrapper.slots.rastMove(slotIndex, newSlotIndex)  
 
 class rast.Drawer
 
@@ -803,14 +812,9 @@ class rast.Drawer
     drawPanel: (subsetWrapper, index) ->
       $panel = $('<div>').attr('id', 'spchars-' + index).addClass('etPanel')
 
-      panelDrawer = new rast.PanelDrawer($panel, subsetWrapper, index, @mode)
+      panelDrawer = new rast.PanelDrawer($panel, subsetWrapper, index, @mode, @subsets, @onSlotAdded)
       panelDrawer.draw()
       $panel
-
-    rearrangeSlot: (slot, newSlotIndex)->
-      subset = @subsets.subsetBySlot(slot)
-      slotIndex = @subsets.slotIndex(slot)
-      subset.slots.rastMove(slotIndex, newSlotIndex)
 
 class rast.PlainObjectParser
 
@@ -1144,10 +1148,9 @@ class rast.SlotAttributesEditor
             }
           else if type == 'boolean'
             {
-              getValue: 'isSelected',
-              OOobject: new OO.ui.CheckboxInputWidget( {
-                value: true,
-                selected: value
+              getValue: 'getValue',
+              OOobject: new OO.ui.ToggleSwitchWidget({
+                value: value
               })
             }
 
@@ -1462,7 +1465,7 @@ $ ->
           return false
       true
     charinsertDivider: ' '
-    extraCSS: '''#edittools .etPanel [data-id] { padding: 0px 2px; content: " "; display: inline-block; } \
+    extraCSS: '''#edittools .etPanel [data-id] { padding: 0px 2px; content: " "; display: inline-block; margin: -1px -1px 0px 0px; } \
     #edittools { min-height: 20px; } 
     #edittools .rastMenu.view { position: absolute; left: 0px; } 
     #edittools .rastMenu.edit { border-bottom: solid #aaaaaa 1px; padding: 2px 6px; } 
@@ -1479,7 +1482,7 @@ $ ->
       background-repeat: no-repeat;
       background-size: cover;
       display: inline-block; } 
-    #edittools .ui-state-highlight { min-height: 1em; line-height: 1em; } 
+    #edittools .ui-state-highlight { min-width: 1em; min-height: 1em; display: inline-block; } 
     #edittools .ui-sortable-helper { min-width: 1em; min-height: 1em; } 
     .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; } 
     .specialchars-tabs a{ display: block; } 
@@ -1501,6 +1504,10 @@ $ ->
     }
     #edittools .panelNameLabel { margin-right: 5px; }
     #edittools .panelRemoveButton { margin-left: 20px; }
+    #edittools .etPanel > .slots { 
+      padding: 6px 1px;
+      border: 1px black dashed; 
+    }
 }'''
     appendExtraCSS: ->
       mw.util.addCSS(@extraCSS)
