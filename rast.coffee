@@ -1567,6 +1567,7 @@ $ ->
       @drawer.mode = @mode
       @drawer.subsets = @temporarySubsets
       @drawer.message = @message
+      @message = null
       @drawer.activeTab = @etActiveTab
       @drawer.draw()
 
