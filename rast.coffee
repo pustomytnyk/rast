@@ -1,4 +1,3 @@
-
 if unsafeWindow? # для Tampermonkey
   window.$ = unsafeWindow.$
   window.etSubsets = unsafeWindow.etSubsets
@@ -584,16 +583,88 @@ window.rast =
             0
           if v > 4 then v else undefined
 
-class rast.helpIcon
+class rast.PanelDrawer
 
-  constructor: (@text)->
+  constructor: (@$panel, @subsetWrapper, @index, @mode)->
 
-  $generate: ->
-    $img = $('<img class="helpIcon">')
-    $img.attr('src', 'https://upload.wikimedia.org/wikipedia/commons/c/c4/Ambox_blue_question.svg').attr('title', @text)
-    $img
+  draw: ->
+    if @mode == 'edit'
+      @drawEditMode()
+    else if @mode == 'view'
+      generateMethod = 'generateHtml'
+      @generateHtml(@$panel, @subsetWrapper.slots, generateMethod)
 
-# все, що стосується малювання
+  sortableSlots: ($slots)->
+    $($slots).sortable
+    items: '[data-id]'
+    start: (event, ui)->
+      copy = $(ui.item[0].outerHTML).clone()
+    placeholder: {
+      element: (copy, ui)->
+        $('<span class="ui-state-highlight">' + copy[0].innerHTML + '</li>')
+      update: ->
+    }
+    receive: (event, ui)=>
+      slotClass = eval(ui.item.attr('data-slot-class'))
+      index = $(event.target).data().sortable.currentItem.index()
+      newSlot = @subsets.addSlot(slotClass, @subsetWrapper, @index)
+      @onSlotAdded(newSlot)
+    update: (event, ui)=>
+      newSlotIndex = ui.item.index('[data-id]') - 1
+      return if newSlotIndex < 0
+      return unless $(ui.item).attr('data-id')
+      slotId = parseInt($(ui.item).attr('data-id'))
+      slot = @subsets.slotById(slotId)
+      @rearrangeSlot(slot, newSlotIndex)
+      @updatePreview
+    revert: true
+
+  drawEditMode: ->
+    # поле вводу для назви панелі
+    $nameLabel = $('<label class="panelNameLabel">Назва:</label>')
+    $nameInputContainer = $('<div>')
+    $nameInputContainer.append($nameLabel)
+    $nameInput = $('<input type="text">').val(@subsetWrapper.caption)
+    $nameInput.change({ subsetWrapper: @subsetWrapper }, @onTabNameChanged)
+    $nameInputContainer.append($nameInput)
+
+    $nameInputContainer.appendTo(@$panel)
+
+    $panelRemoveButton = $('<span class="panelRemoveButton">Вилучити панель</span>')
+    $panelRemoveButton.click =>
+      @onRemoveSubsetClick(@subsetWrapper)
+    $removeIcon = $('<span class="removeIcon">')
+    $nameInputContainer.append($panelRemoveButton)
+    $panelRemoveButton.append($removeIcon)
+
+    $slots = $('<div class="slots">')
+    @$panel.append($slots)
+
+    generateMethod = 'generateEditHtml'
+
+    @sortableSlots($slots)
+
+    if !@subsetWrapper.slots.length
+      $slots.append('<span>Щоб додати комірку, сюди перетягніть потрібний вид з бічної панелі.</span>')
+    else
+      @generateHtml($slots, @subsetWrapper.slots, generateMethod)
+
+    $preview = $('<div>').css('border-top', '1px solid color: #aaa').addClass('preview')
+    $preview.append($('<div>Попередній перегляд:</div>'))
+    $previewContent = $('<div class="content">')
+    @generateHtml($previewContent, @subsetWrapper.slots, 'generateHtml')
+    $preview.append($previewContent)
+    @$panel.append($preview)
+
+  generateHtml: ($slotsContainer, slots, generateMethod) ->
+    for slot in slots
+      $slotsContainer.append(slot[generateMethod]())
+
+  updatePreview: (subsetWrapper)->
+    $previewContent = @$container.find(".asnav-content[data-id=#{ @subsetWrapper.id }] .preview .content")
+    $previewContent.empty()
+    @generateHtml($previewContent, @subsetWrapper.slots, 'generateHtml')
+
 class rast.Drawer
 
     $editButton: ->
@@ -732,83 +803,14 @@ class rast.Drawer
     drawPanel: (subsetWrapper, index) ->
       $panel = $('<div>').attr('id', 'spchars-' + index).addClass('etPanel')
 
-      if @mode == 'edit'
-        # поле вводу для назви панелі
-        $nameLabel = $('<label class="panelNameLabel">Назва:</label>')
-        $nameInputContainer = $('<div>')
-        $nameInputContainer.append($nameLabel)
-        $nameInput = $('<input type="text">').val(subsetWrapper.caption)
-        $nameInput.change({ subsetWrapper: subsetWrapper }, @onTabNameChanged)
-        $nameInputContainer.append($nameInput)
-
-        $nameInputContainer.appendTo($panel)
-
-        $panelRemoveButton = $('<span class="panelRemoveButton">Вилучити панель</span>')
-        $panelRemoveButton.click =>
-          @onRemoveSubsetClick(subsetWrapper)
-        $removeIcon = $('<span class="removeIcon">')
-        $nameInputContainer.append($panelRemoveButton)
-        $panelRemoveButton.append($removeIcon)
-
-        $slots = $('<div class="slots">')
-        $panel.append($slots)
-
-        generateMethod = 'generateEditHtml'
-
-        copy = null
-        # можливість впорядковувати символи
-        $($slots).sortable
-          items: '[data-id]'
-          start: (event, ui)->
-            copy = $(ui.item[0].outerHTML).clone()
-          placeholder: {
-            element: (copy, ui)->
-              return $('<span class="ui-state-highlight">' + copy[0].innerHTML + '</li>')
-            update: ->
-          }
-          receive: (event, ui)=>
-            slotClass = eval(ui.item.attr('data-slot-class'))
-            index = $(event.target).data().sortable.currentItem.index()
-            newSlot = @subsets.addSlot(slotClass, subsetWrapper, index)
-            @onSlotAdded(newSlot)
-          update: (event, ui)=>
-            newSlotIndex = ui.item.index('[data-id]') - 1
-            return if newSlotIndex < 0
-            return unless $(ui.item).attr('data-id')
-            slotId = parseInt($(ui.item).attr('data-id'))
-            slot = @subsets.slotById(slotId)
-            @rearrangeSlot(slot, newSlotIndex)
-            @updatePreview(subsetWrapper)
-          revert: true
-
-        if !subsetWrapper.slots.length
-          $slots.append('<span>Щоб додати комірку, сюди перетягніть потрібний вид з бічної панелі.</span>')
-        else
-          @generateHtml($slots, subsetWrapper.slots, generateMethod)
-        $preview = $('<div>').css('border-top', '1px solid color: #aaa').addClass('preview')
-        $preview.append($('<div>Попередній перегляд:</div>'))
-        $previewContent = $('<div class="content">')
-        @generateHtml($previewContent, subsetWrapper.slots, 'generateHtml')
-        $preview.append($previewContent)
-        $panel.append($preview)
-      else if @mode == 'view'
-        generateMethod = 'generateHtml'
-        @generateHtml($panel, subsetWrapper.slots, generateMethod)
+      panelDrawer = new rast.PanelDrawer($panel, subsetWrapper, index, @mode)
+      panelDrawer.draw()
       $panel
-
-    updatePreview: (subsetWrapper)->
-      $previewContent = @$container.find(".asnav-content[data-id=#{ subsetWrapper.id }] .preview .content")
-      $previewContent.empty()
-      @generateHtml $previewContent, subsetWrapper.slots, 'generateHtml'
 
     rearrangeSlot: (slot, newSlotIndex)->
       subset = @subsets.subsetBySlot(slot)
       slotIndex = @subsets.slotIndex(slot)
       subset.slots.rastMove(slotIndex, newSlotIndex)
-
-    generateHtml: ($panel, slots, generateMethod) ->
-      for slot in slots
-        $panel.append(slot[generateMethod]())
 
 class rast.PlainObjectParser
 
@@ -1248,8 +1250,6 @@ class rast.PlainTextSlot extends rast.Slot
 
     @editableAttributes: new rast.SlotAttributes({ view:
       [
-        { name: 'bold', type: 'boolean', default: false, caption: 'Жирний' }
-        { name: 'italic', type: 'boolean', default: false, caption: 'Похилий' }
         { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
         { name: 'text', type: 'string', default: 'текст', caption: 'Текст', labelAlignment: 'top' }
       ]
@@ -1272,8 +1272,6 @@ class rast.InsertionSlot extends rast.Slot
 
     @editableAttributes: new rast.SlotAttributes({
       view: [
-        { name: 'bold', caption: 'Жирний', type: 'boolean', default: false }
-        { name: 'italic', caption: 'Похилий', type: 'boolean', default: false }
         { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
         { name: 'caption', caption: 'Напис', type: 'text', default: 'Нова вставка' }
         { name: 'captionAsHtml', caption: 'Сприймати напис, як html-код?', type: 'boolean', default: false }
@@ -1339,8 +1337,6 @@ class rast.MultipleInsertionsSlot extends rast.Slot
 
     @editableAttributes: new rast.SlotAttributes({
       view: [
-        { name: 'bold', caption: 'Жирний', type: 'boolean', default: false }
-        { name: 'italic', caption: 'Похилий', type: 'boolean', default: false }
         { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
       ]
       functionality: [
@@ -1499,7 +1495,7 @@ $ ->
       background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Ambox_delete_soft.svg/15px-Ambox_delete_soft.svg.png?uselang=uk');
       display: inline-block;
       width: 15px;
-      height: 15px; 
+      height: 15px;
       margin: 0px 0px 2px 4px;
       vertical-align: middle;
     }
@@ -1517,7 +1513,7 @@ $ ->
 
       event = if rast.ieVersion() < 9 then 'mousedown' else 'click'
       self = @
-      $tabs.on event, '.asnav-content .etPanel [data-id]', ($e) ->
+      $tabs.on event, '.asnav-content .etPanel .slots [data-id]', ($e) ->
         if EditTools.mode == 'edit'
           id = parseInt($(this).closest('.editedSlot').attr('data-id'))
           slot = EditTools.temporarySubsets.slotById(id)
@@ -1587,7 +1583,7 @@ $ ->
       rast.setDefaultSubsets()
       @readFromSpecialSyntaxObject(rast.defaultSubsets)
 
-    setup: ->
+    init: ->
       @subsets = new rast.SubsetsManager
       @temporarySubsets = new rast.SubsetsManager
 
@@ -1630,14 +1626,12 @@ $ ->
       )
 
       $placeholder = $(@parentId)
-      if !$placeholder.length
-        return
+      return if !$placeholder.length
       @appendExtraCSS()
       $placeholder.empty().append(@createEditTools())
       $('input#wpSummary').attr 'style', 'margin-bottom:3px;' #fix margins after moving placeholder
 
       @created = true
-      @refresh()
       @reload()
 
     reload: ->
@@ -1655,10 +1649,6 @@ $ ->
     onSubpageNotFound: ->
       unless @readFromSpecialSyntaxObject(unsafeWindow.etSubsets)
         @showMessage("<div class=\"notFoundWarning\">Підсторінку із символами не знайдено або не вдалося завантажити. Це нормально, якщо ви ще не зберегли жодну версію. Натисніть #{ @editButtonHtml() }, щоб редагувати символи.</div>")
-
-    init: ->
-      if mw.config.get('wgAction') == 'edit' or mw.config.get('wgAction') == 'submit'
-        mw.loader.using('jquery.colorUtil', -> EditTools.setup())
 
     serialize: ->
       JSON.stringify(@subsets, null, 2)
@@ -1693,11 +1683,15 @@ $ ->
       $tabs = $('#' + @id)
       $tabs.throbber(false)
 
+    setupOnEditPage: ->
+      if mw.config.get('wgAction') == 'edit' or mw.config.get('wgAction') == 'submit'
+        mw.loader.using ['mediawiki.cookie', 'oojs-ui', 'jquery.colorUtil'], ->
+          rast.installJQueryPlugins()
+          EditTools.init()
+
   # end EditTools
 
   rast.PlainObjectParser.processShortcut = EditTools.processShortcut;
   rast.PlainObjectParser.addOnloadFunc = EditTools.addOnloadFunc;
 
-  mw.loader.using ['mediawiki.cookie', 'oojs-ui', 'jquery.ui.droppable'], ->
-    rast.installJQueryPlugins()
-    EditTools.init()
+  EditTools.setupOnEditPage()
