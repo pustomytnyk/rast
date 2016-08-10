@@ -600,7 +600,6 @@ class rast.PanelDrawer
       containment: $slots
       forceHelperSize: true
       forcePlaceholderSize: true
-      tolerance: 'pointer'
       items: '[data-id]'
       start: (event, ui)->
         copy = $(ui.item[0].outerHTML).clone()
@@ -1258,6 +1257,10 @@ class rast.PlainTextSlot extends rast.Slot
       ]
     })
 
+    generateEditHtml: ->
+      $elem = super()
+      $elem.attr('title', @text)
+
     generateHtml: (styles)->
       $elem = $('<span>')
       $elem.text(@text)
@@ -1297,8 +1300,8 @@ class rast.InsertionSlot extends rast.Slot
       copy
 
     generateEditHtml: ->
-      $elem = @generateCommonHtml()
-      $elem.addClass('editedSlot')
+      $elem = super()
+      $elem.attr('title', @caption)
 
     generateCommonHtml: (styles)->
       if @captionAsHtml
@@ -1353,8 +1356,8 @@ class rast.MultipleInsertionsSlot extends rast.Slot
       rast.$getTextarea().insertTag(tags.tagOpen, tags.tagClose)
 
     generateEditHtml: ->
-      $elem = @generateCommonHtml()
-      $elem.addClass('editedSlot')
+      $elem = super()
+      $elem.attr('title', @insertion)
 
     generateCommonHtml: (styles)->
       slots = rast.PlainObjectParser.slotsFromStr(@insertion)
@@ -1401,6 +1404,10 @@ class rast.HtmlSlot extends rast.Slot
         @onload = eval('(' + @onload + ')')
       if typeof @onload is 'function'
         EditTools.addOnloadFunc(@onload)
+
+    generateEditHtml: ->
+      $elem = super()
+      $elem.attr('title', @html)
 
     generateHtml: ->
       $elem = $(@html)
@@ -1476,14 +1483,28 @@ $ ->
       true
     charinsertDivider: ' '
     extraCSS: '''
-    #edittools .etPanel [data-id] { padding: 0px 2px; content: " "; display: inline-block; margin: -1px -1px 0px 0px; }
-    #edittools .etPanel [data-id]:hover { z-index: 1; text-decoration: none; }
+    #edittools .etPanel .slots [data-id] { margin: -1px -1px 0px 0px; }
+    #edittools .etPanel [data-id] { padding: 0px 2px; display: inline-block; }
+    #edittools .etPanel .slots [data-id]:hover { z-index: 1; text-decoration: none; }
     #edittools { min-height: 20px; } 
     #edittools .rastMenu.view { position: absolute; left: 0px; } 
     #edittools .rastMenu.edit { border-bottom: solid #aaaaaa 1px; padding: 2px 6px; } 
     #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; margin: 5px 0px; } 
     #edittools .slots.ui-sortable .emptyHint {  } 
-    #edittools .editedSlot { cursor: pointer; min-width: 1em; min-height: 1em; border: 1px solid black; margin-left: -1px; position: relative; } 
+    #edittools .editedSlot { 
+      cursor: pointer; 
+      min-width: 1em;
+      min-height: 1em;
+      border: 1px solid black;
+      margin-left: -1px;
+      position: relative;
+
+      max-width: 90px;
+      max-height: 22px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
     #edittools .editedSlot .overlay { width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; } 
     #edittools .slotClass { cursor: copy; } 
     #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; }
@@ -1494,7 +1515,17 @@ $ ->
       background-repeat: no-repeat;
       background-size: cover;
       display: inline-block; } 
-    #edittools .ui-state-highlight { min-width: 1em; min-height: 1em; display: inline-block; } 
+    #edittools .ui-state-highlight { 
+      min-width: 1em; 
+      min-height: 1em; 
+      display: inline-block; 
+      
+      max-width: 90px;
+      max-height: 22px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    } 
     #edittools .ui-sortable-helper { min-width: 1em; min-height: 1em; } 
     .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; } 
     .specialchars-tabs a{ display: block; } 
@@ -1722,8 +1753,7 @@ $ ->
 
     onEndSavingToSubpage: ->
       $tabs = $('#' + @id)
-      $tabs.throbber(false)      
-
+      $tabs.throbber(false)
 
     setupOnEditPage: ->
       if mw.config.get('wgAction') == 'edit' or mw.config.get('wgAction') == 'submit'
@@ -1737,3 +1767,4 @@ $ ->
   rast.PlainObjectParser.addOnloadFunc = EditTools.addOnloadFunc;
 
   EditTools.setupOnEditPage()
+
