@@ -611,7 +611,7 @@ class rast.PanelDrawer
       receive: (event, ui)=>
         slotClass = eval(ui.item.attr('data-slot-class'))
         index = $(event.target).data().sortable.currentItem.index()
-        newSlot = @subsets.addSlot(slotClass, @subsetWrapper, @index)
+        newSlot = @subsets.addSlot(slotClass, @subsetWrapper, index)
         @onSlotAdded(newSlot)
       update: (event, ui)=>
         newSlotIndex = ui.item.index('[data-id]') - 1
@@ -764,7 +764,6 @@ class rast.Drawer
       $slots.find('.slotClass').draggable
         connectToSortable: '.etPanel .slots'
         helper: 'clone'
-        # revert: 'invalid'
 
     draw: ->
       @$container.find('[original-title]').each (i, elem)->
@@ -1301,7 +1300,7 @@ class rast.InsertionSlot extends rast.Slot
 
     generateEditHtml: ->
       $elem = super()
-      $elem.attr('title', @caption)
+      $elem.attr('title', (@useClickFunc && @clickFunc) || @insertion)
 
     generateCommonHtml: (styles)->
       if @captionAsHtml
@@ -1495,15 +1494,15 @@ $ ->
       cursor: pointer; 
       min-width: 1em;
       min-height: 1em;
-      border: 1px solid black;
+      border: 1px solid grey;
       margin-left: -1px;
       position: relative;
 
-      max-width: 90px;
-      max-height: 22px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
+      //max-width: 90px;
+      //max-height: 22px;
+      //overflow: hidden;
+      //white-space: nowrap;
+      //text-overflow: ellipsis;
     }
     #edittools .editedSlot .overlay { width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; } 
     #edittools .slotClass { cursor: copy; } 
@@ -1520,11 +1519,11 @@ $ ->
       min-height: 1em; 
       display: inline-block; 
       
-      max-width: 90px;
-      max-height: 22px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
+      //max-width: 90px;
+      //max-height: 22px;
+      //overflow: hidden;
+      //white-space: nowrap;
+      //text-overflow: ellipsis;
     } 
     #edittools .ui-sortable-helper { min-width: 1em; min-height: 1em; } 
     .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; } 
@@ -1767,4 +1766,3 @@ $ ->
   rast.PlainObjectParser.addOnloadFunc = EditTools.addOnloadFunc;
 
   EditTools.setupOnEditPage()
-
