@@ -1300,7 +1300,7 @@ class rast.InsertionSlot extends rast.Slot
 
     generateEditHtml: ->
       $elem = super()
-      $elem.attr('title', (@useClickFunc && @clickFunc) || @insertion)
+      $elem.attr('title', (@useClickFunc && @clickFunc.toString()) || @insertion)
 
     generateCommonHtml: (styles)->
       if @captionAsHtml
@@ -1498,6 +1498,7 @@ $ ->
       border: 1px solid grey;
       margin-left: -1px;
       position: relative;
+      display: block;
 
       //max-width: 90px;
       //max-height: 22px;
@@ -1550,6 +1551,8 @@ $ ->
     #edittools .etPanel > .slots { 
       padding: 6px 1px;
       border: 1px black dashed; 
+      overflow: auto;
+      max-height: 240px;
     }
 }'''
     appendExtraCSS: ->
