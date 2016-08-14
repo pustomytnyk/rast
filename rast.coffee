@@ -32,7 +32,7 @@ window.rast =
     isEscaped: (s, i) ->
       escSymbols = 0
       i--
-      while i > -1 and s.charAt(i) == '/'
+      while i > -1 and s.charAt(i) == '\\'
         escSymbols++
         i--
       escSymbols % 2 == 1
@@ -98,8 +98,8 @@ window.rast =
           sel = undefined
 
           SelReplace = (s) ->
-            rast.insertion.replaceSpecsymbols s, '/$', (c) ->
-              if c == '/'
+            rast.insertion.replaceSpecsymbols s, '\\$', (c) ->
+              if c == '\\'
                 return ''
               else if c == '$'
                 return sel
@@ -433,147 +433,6 @@ window.rast =
         context = rast.searchAndReplace.context
         $textarea[0].focus()
 
-  defaultSubsets: []
-
-  setDefaultSubsets: ->
-    @defaultSubsets = [
-      {
-        caption: 'Оформлення'
-        symbols: [
-          '[[$+]] ($+) «$+»'
-          [
-            '|'
-            '| (риска)'
-          ]
-          '&nb' + 'sp — ² ³ ½ € † ‰ ÷ × → … ° °C « » " # § ¶ ~ · • ↑ ↓'
-          [
-            '\''
-            '| (апостроф)'
-          ]
-          '₴ (гривня)п ·п &nbsp; ·п Ǻ Ґ ґ Є є І і Ї ї ·п Ы ы Ъ ъ Э э'
-          { html: '<br/>' }
-          '[[$+|$]] [[+:$]] {{+|$}} [[be:$+]] [[be-x-old:$+]] [[bg:$+]] [[de:$+]] [[el:$+]] [[en:$+]] [[ja:$+]] [[fr:$+]] [[it:$+]] [[pl:$+]] [[ru:$+]] ·п {{langнп'
-          [
-            '{{lang-de|$+}}'
-            '-de'
-          ]
-          [
-            '{{lang-el|$+}}'
-            '-el'
-          ]
-          [
-            '{{lang-en|$+}}'
-            '-en'
-          ]
-          [
-            '{{lang-es|$+}}'
-            '-es'
-          ]
-          [
-            '{{lang-fr|$+}}'
-            '-fr'
-          ]
-          [
-            '{{lang-it|$+}}'
-            '-it'
-          ]
-          [
-            '{{lang-la|$+}}'
-            '-la'
-          ]
-          [
-            '{{lang-uk|$+}}'
-            '-uk'
-          ]
-          [
-            '{{lang-pl|$+}}'
-            '-pl'
-          ]
-          [
-            '{{lang-ru|$+}}'
-            '-ru'
-          ]
-          '}}п ·п {{main|$+}} ·п {{Catmore|$+}} ·п {{refнп'
-          [
-            '{{ref-uk}}'
-            '-uk'
-          ]
-          [
-            '{{ref-en}}'
-            '-en'
-          ]
-          [
-            '{{ref-es}}'
-            '-es'
-          ]
-          [
-            '{{ref-de}}'
-            '-de'
-          ]
-          [
-            '{{ref-fr}}'
-            '-fr'
-          ]
-          [
-            '{{ref-ru}}'
-            '-ru'
-          ]
-          '}}п ·п <ref>$+<//ref> ·п <ref_name="">$+<//ref> ·п <blockquote>$+<//blockquote>'
-          { html: '<br/>' }
-          '==_$+_== ·п ===_$+_=== ·п ==_Див._також_== ·п ==_Примітки_==\n{{reflist}} ·п ==_Посилання_== ·п ==_Джерела_== ·п  <br//> ·п <big>$+<//big> ·п <source_lang="+">$<//source> ·п [[Файл:$|міні|ліворуч|200пкс|+]] ·п </div>'
-          @dot
-          [
-            '<$>+<//$>'
-            '<$></$>'
-          ]
-          @dot
-          [
-            '<+>$<//>'
-            '<></>'
-          ]
-          @dot
-          'список:п'
-          {
-            cap: 'вікіфікувати'
-            func: ->
-              rast.processSelection(rast.linkifyList)
-            key: 'e'
-          }
-          @dot
-          {
-            cap: 'звичайний'
-            func: ->
-              rast.processSelection(rast.simpleList)
-          }
-          @dot
-          {
-            cap: 'нумерований'
-            func: ->
-              rast.processSelection(rast.numericList)
-          }
-          @dot
-          {
-            cap: 'нижній регістр'
-            func: ->
-              rast.processSelection (s) ->
-                s.toLowerCase()
-          }
-        ]
-      }
-      {
-        caption: 'Шаблони'
-        symbols: [ '{{Wikify$+}} ·п {{без_джерел+}} ·п {{Перекладена_стаття||$+}} ·п {{Disambig$+}} {{DisambigG$+}} {{Otheruses|$+}} {{Привітання}}+--~~' + '~~ <noinclude>$+<//noinclude> ·п <includeonly>$+<//includeonly> {{su' + 'bst:afd}} ·п {{{$+}}} ·п [[Категорія:Персоналії$+]] ·п [[Категорія:Персонажі_$+]] ·п [[Категорія:Зображення:$+]] · [[Користувач:$|$+]] [[Категорія:Народились_$+]] [[Категорія:Померли_$+]] [[Категорія:Музичні_колективи,_що_з\'явились_$+]] {{DEFAULTSORT:$+}}' ]
-      }
-      {
-        caption: 'Алфавіти'
-        symbols: [ 'ѣ Ѣ ѧ Ѧ ѩ Ѫ ѫ Ѭ ѭ ·р Ą ą Ć ć Ę ę Ł ł Ń ń Ó ó Ś ś Ż ż Ź ź \n Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω Ϊ Ϋ ά έ ή ί ΰ α β γ δ ε ζ η θ ι κ λ μ ν ξ ο π ρ ς σ τ υ φ χ ψ ω ϊ ϋ ό ύ ώ' ]
-      }
-      {
-        caption: 'Заміна'
-        symbols: [{ html: '<div>' + rast.searchAndReplace.getReplaceForm() + '</div>',  onload: rast.searchAndReplace.replaceFormInit }]
-      }
-    ]
-
   ieVersion: ->
           #http://james.padolsey.com/javascript/detect-ie-in-js-using-conditional-comments/
           v = 3
@@ -848,8 +707,8 @@ class rast.PlainObjectParser
       slots
 
     @lineReplace: (c) ->
-      if c == '/'
-        return '/'
+      if c == '\\'
+        return '\\'
       else if c == '_'
         return ' '
       return
@@ -886,7 +745,7 @@ class rast.PlainObjectParser
         if token == '' or token == '_'
           slot.text = EditTools.charinsertDivider + ' '
         else
-          slot.text = rast.insertion.replaceSpecsymbols(token, '/_', @lineReplace) + ' '
+          slot.text = rast.insertion.replaceSpecsymbols(token, '\\_', @lineReplace) + ' '
       else
         tags = @parseInsertion(token, '')
         slot = new rast.InsertionSlot(
@@ -920,14 +779,14 @@ class rast.PlainObjectParser
       if n > -1
         tagOpen = token.substring(0, n)
         tagClose = token.substring(n + 1)
-      tagOpen = rast.insertion.replaceSpecsymbols(tagOpen, '/_', @lineReplace)
-      tagClose = rast.insertion.replaceSpecsymbols(tagClose, '/_', @lineReplace)
+      tagOpen = rast.insertion.replaceSpecsymbols(tagOpen, '\\_', @lineReplace)
+      tagClose = rast.insertion.replaceSpecsymbols(tagClose, '\\_', @lineReplace)
       if !caption
         caption = tagOpen + tagClose + ' '
-        caption = rast.insertion.replaceSpecsymbols(caption, '/$', (c) ->
+        caption = rast.insertion.replaceSpecsymbols(caption, '\\$', (c) ->
           if c == '$'
             return ''
-          else if c == '/'
+          else if c == '\\'
             return ''
           return
         )
@@ -953,7 +812,7 @@ class rast.PlainObjectParser
         hotkeysHandler.processShortcut slot, obj
       slot
 
-  # серіялізовний стан: всі символи + функції, які викликаються символами.
+# серіялізовний стан: всі символи + функції, які викликаються символами.
 class rast.SubsetsManager
 
     constructor: ->
@@ -1158,6 +1017,7 @@ class rast.SlotAttributesEditor
           input: OOinput.OOobject
           getValueFunc: OOinput.getValue
           labelAlignment: attribute.labelAlignment || 'left'
+          helpText: attribute.help
         }
         if OOinput
           @allInputs.push(inputData)
@@ -1175,6 +1035,7 @@ class rast.SlotAttributesEditor
         new OO.ui.FieldLayout(inputWrapper.input, {
           label: inputWrapper.label,
           align: inputWrapper.labelAlignment
+          help: inputWrapper.helpText
         })
       )
 
@@ -1282,7 +1143,15 @@ class rast.InsertionSlot extends rast.Slot
         { name: 'captionAsHtml', caption: 'Сприймати напис, як html-код?', type: 'boolean', default: false }
       ]
       functionality: [
-        { name: 'insertion', caption: 'Текст вставки', type: 'text', default: '$', labelAlignment: 'top' }
+        { 
+          name: 'insertion', 
+          caption: 'Текст вставки', 
+          type: 'text', 
+          default: '$', 
+          labelAlignment: 'top', 
+          help: '''Символ долара "$" буде замінано на виділений текст. Перший символ додавання "+" позначає місце каретки після вставляння. 
+            Щоб екранувати їх, поставте "\" перед потрібним символом; наприклад "\$" вставлятиме знак долара.''' 
+        }
         { name: 'useClickFunc', caption: 'Замість вставляння виконати іншу дію?', type: 'boolean', default: false }
         { name: 'clickFunc', caption: 'Інша дія (при клацанні)', type: 'text', default: 'function(){  }', labelAlignment: 'top' }
       ]
@@ -1622,7 +1491,6 @@ $ ->
       @view()
 
     restoreDefaults: ->
-      rast.setDefaultSubsets()
       @readFromSubpage('User:AS/defaults.js')
 
     init: ->
