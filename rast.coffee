@@ -1496,7 +1496,7 @@ $ ->
       @drawer.subsets = @temporarySubsets
       @drawer.message = @message
       @message = null
-      @drawer.activeTab = @etActiveTab
+      @drawer.activeTab = etActiveTab
       @drawer.draw()
 
       @fireOnloadFuncs()
@@ -1577,7 +1577,7 @@ $ ->
       @refresh()
 
     onSubpageNotFound: ->
-      unless @readFromSpecialSyntaxObject(unsafeWindow.etSubsets)
+      unless @readFromSpecialSyntaxObject(window.etSubsets)
         @showMessage("<div class=\"notFoundWarning\">Підсторінку із символами не знайдено або не вдалося завантажити. Це нормально, якщо ви ще не зберегли жодну версію. Натисніть #{ @editButtonHtml() }, щоб редагувати символи.</div>")
 
     serialize: ->
