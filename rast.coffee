@@ -1483,9 +1483,9 @@ $ ->
     charinsertDivider: ' '
     extraCSS: '''
     #edittools .etPanel .slots [data-id] { margin: -1px -1px 0px 0px; }
-    #edittools .etPanel [data-id] { padding: 0px 2px; }
     #edittools .etPanel .slots [data-id]:hover { z-index: 1; text-decoration: none; }
     #edittools .etPanel .preview [data-id] { display: inline; }
+    #edittools .etPanel > [data-id] { display: inline; }
     #edittools { min-height: 20px; } 
     #edittools .rastMenu.view { position: absolute; left: 0px; } 
     #edittools .rastMenu.edit { border-bottom: solid #aaaaaa 1px; padding: 2px 6px; } 
@@ -1499,12 +1499,6 @@ $ ->
       margin-left: -1px;
       position: relative;
       display: block;
-
-      //max-width: 90px;
-      //max-height: 22px;
-      //overflow: hidden;
-      //white-space: nowrap;
-      //text-overflow: ellipsis;
     }
     #edittools .editedSlot .overlay { width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; } 
     #edittools .slotClass { cursor: copy; } 
@@ -1519,13 +1513,7 @@ $ ->
     #edittools .ui-state-highlight { 
       min-width: 1em; 
       min-height: 1em; 
-      display: inline-block; 
-      
-      //max-width: 90px;
-      //max-height: 22px;
-      //overflow: hidden;
-      //white-space: nowrap;
-      //text-overflow: ellipsis;
+      display: inline-block;
     } 
     #edittools .ui-sortable-helper { min-width: 1em; min-height: 1em; } 
     .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; } 
