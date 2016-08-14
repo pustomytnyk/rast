@@ -1045,7 +1045,7 @@ class rast.SlotAttributesEditor
     startEditing: ->
       slotClass = @slot.constructor
       attrs = slotClass.editableAttributes
-      $content = $('<div class="rastSpecialChars">')
+      $content = $('<div class="rastEditWindow">')
       if attrs.view
         fieldset = @fieldsetForAttrs('Вигляд', attrs.view)
         $content.append(fieldset.$element)
@@ -1053,31 +1053,37 @@ class rast.SlotAttributesEditor
         fieldset = @fieldsetForAttrs('Функціонал', attrs.functionality)
         $content.append(fieldset.$element)
 
-      panel = new OO.ui.PanelLayout({ $: $, padded: true, expanded: false })
-      panel.$element.append($content)
-
-      dialog = rast.UIwindow.show(panel.$element)
-
       saveButton = new OO.ui.ButtonWidget(icon: 'check', label: 'Зберегти')
       saveButton.on 'click', =>
         for inputWrapper in @allInputs
           @slot[inputWrapper.attribute] = inputWrapper.input[inputWrapper.getValueFunc]()
         EditTools.refresh()
         dialog.close()
-      $content.append(saveButton.$element)
 
       cancelButton = new OO.ui.ButtonWidget(icon: 'cancel', label: 'Скасувати')
       cancelButton.on 'click', ->
         dialog.close()
-
-      $content.append(cancelButton.$element)
 
       removeButton = new OO.ui.ButtonWidget(icon: 'remove', label: 'Вилучити комірку')
       removeButton.on 'click', =>
         @slotsManager.onDeleteSlot?(@slot.id)
         dialog.close()
 
-      $content.append(removeButton.$element)
+      bottomButtons = new OO.ui.HorizontalLayout( {
+        items: [
+          saveButton
+          cancelButton
+          removeButton
+        ]
+        classes: ['bottomButtons']
+      })
+
+      $content.append(bottomButtons.$element)
+
+      panel = new OO.ui.PanelLayout({ $: $, padded: true, expanded: false })
+      panel.$element.append($content)
+
+      dialog = rast.UIwindow.show(panel.$element)
 
 class rast.SlotAttributes
 
@@ -1149,8 +1155,8 @@ class rast.InsertionSlot extends rast.Slot
           type: 'text', 
           default: '$', 
           labelAlignment: 'top', 
-          help: '''Символ долара "$" буде замінано на виділений текст. Перший символ додавання "+" позначає місце каретки після вставляння. 
-            Щоб екранувати їх, поставте "\" перед потрібним символом; наприклад "\$" вставлятиме знак долара.''' 
+          help: '''Символ долара "$" буде замінено на виділений текст. Перший символ додавання "+" позначає місце каретки після вставлення. 
+            Якщо хочете екранувати ці символи, поставте "\\" перед потрібним символом; наприклад "\\$" вставлятиме знак долара.''' 
         }
         { name: 'useClickFunc', caption: 'Замість вставляння виконати іншу дію?', type: 'boolean', default: false }
         { name: 'clickFunc', caption: 'Інша дія (при клацанні)', type: 'text', default: 'function(){  }', labelAlignment: 'top' }
@@ -1214,7 +1220,18 @@ class rast.MultipleInsertionsSlot extends rast.Slot
         { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
       ]
       functionality: [
-        { name: 'insertion', caption: 'Вставки', type: 'text', default: 'вставка_1 ·п вставка_2', labelAlignment: 'top' }
+        { 
+          name: 'insertion'
+          caption: 'Вставки'
+          type: 'text'
+          default: 'вставка_1 ·п вставка_2'
+          labelAlignment: 'top'
+          help: '''Все, що розділене символами пробілу, вважається окремою коміркою. 
+            Якщо комірка закірчується символом "п", вона вважатиметься не вставкою, а простим текстом. 
+            Якщо хочете включити пробіл у вставку, пишіть нижнє підкреслення: "_". 
+            Символ долара "$" буде замінено на виділений текст. Перший символ додавання "+" позначає місце каретки після вставлення. 
+            Якщо хочете екранувати ці символи, поставте "\\" перед потрібним символом; наприклад "\\$" вставлятиме знак долара.''' 
+        }
       ]
     })
 
@@ -1411,6 +1428,7 @@ $ ->
       overflow: auto;
       max-height: 240px;
     }
+    .rastEditWindow .bottomButtons { margin-top: 10px; }
 }'''
     appendExtraCSS: ->
       mw.util.addCSS(@extraCSS)
