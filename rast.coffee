@@ -585,7 +585,7 @@ window.rast =
 
 class rast.PanelDrawer
 
-  constructor: (@$panel, @subsetWrapper, @index, @mode, @subsets, @onSlotAdded)->
+  constructor: (@$panel, @subsetWrapper, @index, @mode, @subsets, @onSlotAdded, @onRemoveSubsetClick)->
 
   draw: ->
     if @mode == 'edit'
@@ -810,7 +810,7 @@ class rast.Drawer
     drawPanel: (subsetWrapper, index) ->
       $panel = $('<div>').attr('id', 'spchars-' + index).addClass('etPanel')
 
-      panelDrawer = new rast.PanelDrawer($panel, subsetWrapper, index, @mode, @subsets, @onSlotAdded)
+      panelDrawer = new rast.PanelDrawer($panel, subsetWrapper, index, @mode, @subsets, @onSlotAdded, @onRemoveSubsetClick)
       panelDrawer.draw()
       $panel
 
@@ -1623,7 +1623,7 @@ $ ->
 
     restoreDefaults: ->
       rast.setDefaultSubsets()
-      @readFromSpecialSyntaxObject(rast.defaultSubsets)
+      @readFromSubpage('User:AS/defaults.js')
 
     init: ->
       @subsets = new rast.SubsetsManager
@@ -1713,10 +1713,10 @@ $ ->
     subpageName: ->
       'User:' + mw.config.values.wgUserName + '/' + @subpageStorageName
 
-    readFromSubpage: ->
+    readFromSubpage: (pagename)->
       @reset()
       json = rast.PageStorage.load(
-        @subpageName()
+        pagename || @subpageName()
         (pagetext)=>
           pagetextWithoutNowiki = pagetext.replace(/^<nowiki>/, '').replace(/<\/nowiki>$/, '')
           serializedTools = JSON.parse(pagetextWithoutNowiki)
