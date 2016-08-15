@@ -675,6 +675,8 @@ class rast.Drawer
 
 class rast.PlainObjectParser
 
+    @charinsertDivider: ' '
+
     @parseTokens: (arr, hotkeysHandler) ->
       slots = []
       for token in arr
@@ -743,7 +745,7 @@ class rast.PlainObjectParser
           bold: modifiers.bold
           italic: modifiers.italic)
         if token == '' or token == '_'
-          slot.text = EditTools.charinsertDivider + ' '
+          slot.text = @charinsertDivider + ' '
         else
           slot.text = rast.insertion.replaceSpecsymbols(token, '\\_', @lineReplace) + ' '
       else
@@ -1057,7 +1059,7 @@ class rast.SlotAttributesEditor
       saveButton.on 'click', =>
         for inputWrapper in @allInputs
           @slot[inputWrapper.attribute] = inputWrapper.input[inputWrapper.getValueFunc]()
-        EditTools.refresh()
+        @slotsManager.onSlotSaved()
         dialog.close()
 
       cancelButton = new OO.ui.ButtonWidget(icon: 'cancel', label: 'Скасувати')
@@ -1288,7 +1290,7 @@ class rast.HtmlSlot extends rast.Slot
       if typeof @onload is 'string'
         @onload = eval('(' + @onload + ')')
       if typeof @onload is 'function'
-        EditTools.addOnloadFunc(@onload)
+        editTools.addOnloadFunc(@onload)
 
     generateEditHtml: ->
       $elem = super()
@@ -1347,18 +1349,18 @@ class rast.PageStorage
         )
 
 $ ->
-  window.EditTools =
+  window.editTools =
     hotkeys: []
     onloadFuncs: []
     mode: 'view'
     addOnloadFunc: (func) =>
-      EditTools.onloadFuncs.push(func)
+      editTools.onloadFuncs.push(func)
     fireOnloadFuncs: ->
-      for func in EditTools.onloadFuncs
+      for func in editTools.onloadFuncs
         func()
     checkHotkey: (e) ->
       if e and e.ctrlKey
-        obj = EditTools.hotkeys[String.fromCharCode(e.which).toUpperCase()]
+        obj = editTools.hotkeys[String.fromCharCode(e.which).toUpperCase()]
         if obj
           if typeof obj == 'object'
             obj.trigger 'click'
@@ -1366,7 +1368,6 @@ $ ->
             obj()
           return false
       true
-    charinsertDivider: ' '
     extraCSS: '''
     #edittools .etPanel .slots [data-id] { margin: -1px -1px 0px 0px; }
     #edittools .etPanel .slots [data-id]:hover { z-index: 1; text-decoration: none; }
@@ -1442,10 +1443,10 @@ $ ->
       event = if rast.ieVersion() < 9 then 'mousedown' else 'click'
       self = @
       $tabs.on event, '.asnav-content .etPanel .slots [data-id]', ($e) ->
-        if EditTools.mode == 'edit'
+        if editTools.mode == 'edit'
           id = parseInt($(this).closest('.editedSlot').attr('data-id'))
-          slot = EditTools.temporarySubsets.slotById(id)
-          EditTools.editWindow(slot)
+          slot = editTools.temporarySubsets.slotById(id)
+          editTools.editWindow(slot)
       $tabs
 
     editWindow: (slot)->
@@ -1489,7 +1490,7 @@ $ ->
         return
 
       $tabs = $('#' + @id)
-      etActiveTab = $tabs.find('.existingTabs .asnav-selectedtab').attr('data-contentid') || mw.cookie.get(EditTools.cookieName + 'Selected') or 'etTabContent0'
+      etActiveTab = $tabs.find('.existingTabs .asnav-selectedtab').attr('data-contentid') || mw.cookie.get(editTools.cookieName + 'Selected') or 'etTabContent0'
 
       @drawer.$container = $tabs
       @drawer.mode = @mode
@@ -1501,7 +1502,7 @@ $ ->
 
       @fireOnloadFuncs()
       $tabs.on 'asNav:select', (ev, selectedId) ->
-        mw.cookie.set EditTools.cookieName + 'Selected', selectedId
+        mw.cookie.set editTools.cookieName + 'Selected', selectedId
 
     save: ->
       @subsets = @temporarySubsets
@@ -1516,7 +1517,7 @@ $ ->
       @temporarySubsets = new rast.SubsetsManager
 
       $tabs = $('#' + @id)
-      etActiveTab = $tabs.find('.existingTabs .asnav-selectedtab').attr('data-contentid') || mw.cookie.get(EditTools.cookieName + 'Selected') or 'etTabContent0'
+      etActiveTab = $tabs.find('.existingTabs .asnav-selectedtab').attr('data-contentid') || mw.cookie.get(editTools.cookieName + 'Selected') or 'etTabContent0'
 
       @drawer = new rast.Drawer()
       $.extend(
@@ -1636,11 +1637,14 @@ $ ->
       if mw.config.get('wgAction') == 'edit' or mw.config.get('wgAction') == 'submit'
         mw.loader.using ['mediawiki.cookie', 'oojs-ui', 'jquery.colorUtil'], ->
           rast.installJQueryPlugins()
-          EditTools.init()
+          editTools.init()
 
-  # end EditTools
+    onSlotSaved: ->
+      @refresh()
 
-  rast.PlainObjectParser.processShortcut = EditTools.processShortcut;
-  rast.PlainObjectParser.addOnloadFunc = EditTools.addOnloadFunc;
+  # end editTools
 
-  EditTools.setupOnEditPage()
+  rast.PlainObjectParser.processShortcut = editTools.processShortcut;
+  rast.PlainObjectParser.addOnloadFunc = editTools.addOnloadFunc;
+
+  editTools.setupOnEditPage()
