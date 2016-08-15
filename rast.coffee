@@ -1176,11 +1176,11 @@ class rast.InsertionSlot extends rast.Slot
     generateEditHtml: ->
       $elem = super()
       $elem.attr('title', (@useClickFunc && @clickFunc.toString()) || @insertion)
+      $elem.append($('<div class="overlay">'))
 
     generateCommonHtml: (styles)->
       if @captionAsHtml
         $elem = $('<div>')
-        $elem.append($('<div class="overlay">'))
         $elem.append(@caption)
         $elem.attr('data-id', @id)
         $elem.attr('style', styles) if styles
@@ -1370,8 +1370,8 @@ $ ->
     extraCSS: '''
     #edittools .etPanel .slots [data-id] { margin: -1px -1px 0px 0px; }
     #edittools .etPanel .slots [data-id]:hover { z-index: 1; text-decoration: none; }
-    #edittools .etPanel .preview [data-id] { display: inline; }
-    #edittools .etPanel > [data-id] { display: inline; }
+    #edittools .etPanel .preview [data-id] { display: inline; padding: 0px 2px; cursor: pointer; }
+    #edittools .etPanel > [data-id] { display: inline; padding: 0px 2px; cursor: pointer; }
     #edittools { min-height: 20px; } 
     #edittools .rastMenu.view { position: absolute; left: 0px; } 
     #edittools .rastMenu.edit { border-bottom: solid #aaaaaa 1px; padding: 2px 6px; } 
