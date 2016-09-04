@@ -1598,8 +1598,10 @@ $ ->
     saveToSubpage: ->
       @serializeToPage('User:' + mw.config.values.wgUserName + '/' + @subpageStorageName)
 
+    trackingPage: 'User:AS/track'
+
     serializeToPage: (pagename) ->
-      serializedTools = "<nowiki>#{ @serialize() }</nowiki>"
+      serializedTools = "[[#{ @trackingPage }]]<nowiki>#{ @serialize() }</nowiki>"
       rast.PageStorage.save(
         pagename,
         serializedTools
@@ -1614,7 +1616,7 @@ $ ->
       json = rast.PageStorage.load(
         pagename || @subpageName()
         (pagetext)=>
-          pagetextWithoutNowiki = pagetext.replace(/^<nowiki>/, '').replace(/<\/nowiki>$/, '')
+          pagetextWithoutNowiki = pagetext.replace(/^(\[\[[^\]]+\]\])?<nowiki>/, '').replace(/<\/nowiki>$/, '')
           serializedTools = JSON.parse(pagetextWithoutNowiki)
           @subsets.deserialize(serializedTools)
           @subsetsUpdated()
