@@ -534,8 +534,12 @@ class rast.PanelDrawer
 
 class rast.Drawer
 
+    $editButtonIcon: ->
+      $('<div class="gear">')
+
     $editButton: ->
-      $editButton = $('<div class="menuButton edit">')
+      $editButton = @$editButtonIcon()
+      $editButton.addClass('menuButton edit')
       $editButton.attr('title', 'Редагувати символи.')
 
     # кнопочки для переходу в режим редагування: [edit][save][reset]
@@ -547,24 +551,24 @@ class rast.Drawer
         $editButton.click(@onEditClick)
         $menu.append($editButton)
       else if @mode == 'edit'
+        $dot = ->
+          $('<span> · </span>')
+
         $persistButton = $('<span class="menuButton">').attr('title', 'Символи буде збережено у Вашому особистому просторі. Для цього виконається редагування підсторінки від Вашого імени.')
         $persistButton.text('зберегти на підсторінку').click(@onPersistClick)
-        $menu.append($persistButton)
-        $menu.append($('<span> · </span>'))
 
         $saveButton = $('<span class="menuButton">').attr('title', 'Зміни збережуться тільки на час редагування сторінки і втратяться після закриття або перевантаження сторінки.')
         $saveButton.text('зберегти').click(@onSaveClick)
-        $menu.append($saveButton)
-        $menu.append($('<span> · </span>'))
 
         $cancelButton = $('<span class="menuButton">')
         $cancelButton.text('скасувати').click(@onCancelClick).attr('title', 'Всі зміни цієї сесії редагування будуть відкинуті.')
-        $menu.append($cancelButton)
-        $menu.append($('<span> · </span>'))
 
         $resetButton = $('<span class="menuButton">')
         $resetButton.text('відновити звичаєві').click(@onResetClick).attr('title', 'Буде відновлено набір символів за промовчанням.')
-        $menu.append($resetButton)
+
+        $aboutLink = $("<a class=\"aboutLink\" target=\"_blank\" href=\"#{ @docLink }\">про додаток</a>")
+
+        $menu.append($persistButton, $dot(), $saveButton, $dot(), $cancelButton, $dot(), $resetButton, $aboutLink)
 
       @$container.append($menu)
 
@@ -1390,7 +1394,7 @@ $ ->
     #edittools .editedSlot .overlay { width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; } 
     #edittools .slotClass { cursor: copy; } 
     #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; }
-    #edittools .menuButton.edit { 
+    #edittools .gear { 
       background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Simpleicons_Interface_gear-wheel-in-black.svg/15px-Simpleicons_Interface_gear-wheel-in-black.svg.png'); 
       height: 15px;;
       width: 15px; 
@@ -1430,6 +1434,8 @@ $ ->
       max-height: 240px;
     }
     .rastEditWindow .bottomButtons { margin-top: 10px; }
+
+    #edittools .aboutLink { float: right; }
 }'''
     appendExtraCSS: ->
       mw.util.addCSS(@extraCSS)
@@ -1523,6 +1529,7 @@ $ ->
       $.extend(
         @drawer
         {
+          docLink: @docLink
           onTabClick: null,
           onSaveClick: =>
             @save()
@@ -1570,8 +1577,10 @@ $ ->
       $tabs.throbber(true, 'prepend')
       @readFromSubpage()
 
+    docLink: 'https://uk.wikipedia.org/wiki/%D0%9A%D0%BE%D1%80%D0%B8%D1%81%D1%82%D1%83%D0%B2%D0%B0%D1%87:AS/%D0%9F%D0%9F%D0%A1-2'  
+
     editButtonHtml: ->
-      @drawer.$editButton().prop('outerHTML')
+      @drawer.$editButtonIcon().prop('outerHTML')
 
     showMessage: (html)->
       @message = html
@@ -1579,7 +1588,7 @@ $ ->
 
     onSubpageNotFound: ->
       unless @readFromSpecialSyntaxObject(window.etSubsets)
-        @showMessage("<div class=\"notFoundWarning\">Підсторінку із символами не знайдено або не вдалося завантажити. Це нормально, якщо ви ще не зберегли жодну версію. Натисніть #{ @editButtonHtml() }, щоб редагувати символи.</div>")
+        @showMessage("<div class=\"notFoundWarning\">Це повідомлення від додатка <a href=\"#{ @docLink }\">Покращеної панелі спецсимволів</a> (Налаштування -> Додатки -> Редагування). Підсторінку із символами не знайдено або не вдалося завантажити. Це нормально, якщо ви ще не зберегли жодну версію. Натисніть зліва від панелі на #{ @editButtonHtml() }, щоб редагувати символи.</div>")
 
     serialize: ->
       JSON.stringify(@subsets, null, 2)
