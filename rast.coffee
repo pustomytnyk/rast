@@ -444,7 +444,7 @@ window.rast =
 
 class rast.PanelDrawer
 
-  constructor: (@$panel, @subsetWrapper, @index, @mode, @subsets, @onSlotAdded, @onRemoveSubsetClick)->
+  constructor: (@$panel, @subsetWrapper, @index, @mode, @subsets, @eventsHandler)->
 
   draw: ->
     if @mode == 'edit'
@@ -471,7 +471,7 @@ class rast.PanelDrawer
         slotClass = eval(ui.item.attr('data-slot-class'))
         index = $(event.target).data().sortable.currentItem.index()
         newSlot = @subsets.addSlot(slotClass, @subsetWrapper, index)
-        @onSlotAdded(newSlot)
+        @eventsHandler.onSlotAdded(newSlot)
       update: (event, ui)=>
         newSlotIndex = ui.item.index('[data-id]') - 1
         return if newSlotIndex < 0
@@ -488,14 +488,14 @@ class rast.PanelDrawer
     $nameInputContainer = $('<div>')
     $nameInputContainer.append($nameLabel)
     $nameInput = $('<input type="text">').val(@subsetWrapper.caption)
-    $nameInput.change({ subsetWrapper: @subsetWrapper }, @onTabNameChanged)
+    $nameInput.change({ subsetWrapper: @subsetWrapper }, @eventsHandler.onTabNameChanged)
     $nameInputContainer.append($nameInput)
 
     $nameInputContainer.appendTo(@$panel)
 
     $panelRemoveButton = $('<span class="panelRemoveButton">Вилучити панель</span>')
     $panelRemoveButton.click =>
-      @onRemoveSubsetClick(@subsetWrapper)
+      @eventsHandler.onRemoveSubsetClick(@subsetWrapper)
     $removeIcon = $('<span class="removeIcon">')
     $nameInputContainer.append($panelRemoveButton)
     $panelRemoveButton.append($removeIcon)
@@ -548,23 +548,23 @@ class rast.Drawer
       $menu.addClass(@mode)
       if @mode == 'view'
         $editButton = @$editButton()
-        $editButton.click(@onEditClick)
+        $editButton.click(@eventsHandler.onEditClick)
         $menu.append($editButton)
       else if @mode == 'edit'
         $dot = ->
           $('<span> · </span>')
 
         $persistButton = $('<span class="menuButton">').attr('title', 'Символи буде збережено у Вашому особистому просторі. Для цього виконається редагування підсторінки від Вашого імени.')
-        $persistButton.text('зберегти на підсторінку').click(@onPersistClick)
+        $persistButton.text('зберегти на підсторінку').click(@eventsHandler.onPersistClick)
 
         $saveButton = $('<span class="menuButton">').attr('title', 'Зміни збережуться тільки на час редагування сторінки і втратяться після закриття або перевантаження сторінки.')
-        $saveButton.text('зберегти').click(@onSaveClick)
+        $saveButton.text('зберегти').click(@eventsHandler.onSaveClick)
 
         $cancelButton = $('<span class="menuButton">')
-        $cancelButton.text('скасувати').click(@onCancelClick).attr('title', 'Всі зміни цієї сесії редагування будуть відкинуті.')
+        $cancelButton.text('скасувати').click(@eventsHandler.onCancelClick).attr('title', 'Всі зміни цієї сесії редагування будуть відкинуті.')
 
         $resetButton = $('<span class="menuButton">')
-        $resetButton.text('відновити звичаєві').click(@onResetClick).attr('title', 'Буде відновлено набір символів за промовчанням.')
+        $resetButton.text('відновити звичаєві').click(@eventsHandler.onResetClick).attr('title', 'Буде відновлено набір символів за промовчанням.')
 
         $aboutLink = $("<a class=\"aboutLink\" target=\"_blank\" href=\"#{ @docLink }\">про додаток</a>")
 
@@ -575,9 +575,9 @@ class rast.Drawer
     drawTab: ($container, text)->
       $a = $('<a>')
       $adiv = $('<div>')
-      $a.text text
-      $adiv.append $a
-      $container.append $adiv
+      $a.text(text)
+      $adiv.append($a)
+      $container.append($adiv)
       $adiv
 
     # навігація по панелях
@@ -587,8 +587,8 @@ class rast.Drawer
         $adiv = @drawTab($container, @subsets.subsets[i].caption)
         id = 'etTabContent' + i
         $adiv.addClass('asnav-selectedtab') if @activeTab == id
-        $adiv.attr 'data-contentid', id
-        $adiv.click @onTabClick
+        $adiv.attr('data-contentid', id)
+        $adiv.click(@eventsHandler.onTabClick)
         i++
       $container
 
@@ -604,7 +604,7 @@ class rast.Drawer
         $addNewdiv = @drawTab($outline, '+ панель')
         $addNewdiv.addClass('newPanelButton')
         $addNewdiv.attr('title', 'Додати нову панель')
-        $addNewdiv.click(@onAddSubsetClick)
+        $addNewdiv.click(@eventsHandler.onAddSubsetClick)
 
       @$container.append($outline)
 
@@ -673,7 +673,7 @@ class rast.Drawer
     drawPanel: (subsetWrapper, index) ->
       $panel = $('<div>').attr('id', 'spchars-' + index).addClass('etPanel')
 
-      panelDrawer = new rast.PanelDrawer($panel, subsetWrapper, index, @mode, @subsets, @onSlotAdded, @onRemoveSubsetClick)
+      panelDrawer = new rast.PanelDrawer($panel, subsetWrapper, index, @mode, @subsets, @eventsHandler)
       panelDrawer.draw()
       $panel
 
@@ -1525,40 +1525,43 @@ $ ->
       $tabs = $('#' + @id)
       etActiveTab = $tabs.find('.existingTabs .asnav-selectedtab').attr('data-contentid') || mw.cookie.get(editTools.cookieName + 'Selected') or 'etTabContent0'
 
+      @onSaveClick = =>
+        @save()
+      @onCancelClick = =>
+        @undoChanges()
+        @view()
+      @onResetClick = =>
+        @restoreDefaults()
+      @onEditClick = =>
+        @edit()
+      @onTabNameChanged = (event)=>
+        event.data.subsetWrapper.caption = $(event.target).val()
+        @refresh()
+      @onAddSubsetClick = =>
+        subset = @temporarySubsets.addSubset('Нова панель', @temporarySubsets.subsets.length)
+        @refresh()
+        $tabs = $('#' + @id)
+        $tabs.asnavSelect('etTabContent' + subset.id)
+      @onRemoveSubsetClick = (subsetWrapper)=>
+        @temporarySubsets.deleteSubset(subsetWrapper)
+        @refresh()
+      @onSlotAdded = =>
+        @refresh()
+      @onPersistClick = =>
+        @save()
+        $tabs = $('#' + @id)
+        $tabs.throbber(true, 'prepend')
+        @saveToSubpage()
+      @onSlotRemoved = =>
+        @refresh()
+
       @drawer = new rast.Drawer()
       $.extend(
         @drawer
         {
           docLink: @docLink
           onTabClick: null,
-          onSaveClick: =>
-            @save()
-          onCancelClick: =>
-            @undoChanges()
-            @view()
-          onResetClick: =>
-            @restoreDefaults()
-          onEditClick: =>
-            @edit()
-          onTabNameChanged: (event)=>
-            event.data.subsetWrapper.caption = $(event.target).val()
-            @refresh()
-          onAddSubsetClick: =>
-            subset = @temporarySubsets.addSubset('Нова панель', @temporarySubsets.subsets.length)
-            @refresh()
-            $tabs.asnavSelect('etTabContent' + subset.id)
-          onRemoveSubsetClick: (subsetWrapper)=>
-            @temporarySubsets.deleteSubset(subsetWrapper)
-            @refresh()
-          onSlotAdded: =>
-            @refresh()
-          onPersistClick: =>
-            @save()
-            $tabs = $('#' + @id)
-            $tabs.throbber(true, 'prepend')
-            @saveToSubpage()
-          onSlotRemoved: =>
-            @refresh()
+          eventsHandler: @
           slotClasses: [rast.PlainTextSlot, rast.InsertionSlot, rast.MultipleInsertionsSlot, rast.HtmlSlot]
         }
       )
