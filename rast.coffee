@@ -4,7 +4,9 @@ if unsafeWindow? # для Tampermonkey
 
 window.rast =
   clone: (object)->
-    Object.assign({}, object)
+    result = Object.assign({}, object)
+    Object.setPrototypeOf(result, Object.getPrototypeOf(object))
+    result
 
   arrayMove: (array, from, to)->
     array.splice(to, 0, array.splice(from, 1)[0])
