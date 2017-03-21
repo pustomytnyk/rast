@@ -349,13 +349,11 @@ class rast.Drawer
         helper: 'clone'
 
     draw: ->
-      
-      mw.loader.using ['jquery.ui.sortable', 'jquery.ui.droppable', 'jquery.ui.draggable', 'jquery.tipsy'], =>
-        @$container.empty()
-        @drawMenu()
-        @drawMessage()
-        @drawNavigation()
-        @drawPanels()
+      @$container.empty()
+      @drawMenu()
+      @drawMessage()
+      @drawNavigation()
+      @drawPanels()
         
     drawMessage: ->
       @$container.append(@message)
@@ -1016,45 +1014,43 @@ class rast.HtmlSlot extends rast.Slot
 class rast.PageStorage
 
   @load: (pagename, onLoaded, handler)->
-    mw.loader.using 'mediawiki.api.edit', ->
-        api = new (mw.Api)
-        api.get(
-          action: 'query'
-          prop: 'revisions'
-          rvprop: 'content'
-          titles: pagename
-        ).done((data) ->
-         for pageId of data.query.pages
-           if data.query.pages[pageId].revisions
-             onLoaded?(data.query.pages[pageId].revisions[0]['*'])
-           else
-             handler.onSubpageNotFound?(pageId)
-        ).fail(
-          ->
-            handler.onReadFromSubpageError()
-        ).always(
-          ->
-            handler.onEndReadingSubpage()
-        )
+    api = new (mw.Api)
+    api.get(
+      action: 'query'
+      prop: 'revisions'
+      rvprop: 'content'
+      titles: pagename
+    ).done((data) ->
+     for pageId of data.query.pages
+       if data.query.pages[pageId].revisions
+         onLoaded?(data.query.pages[pageId].revisions[0]['*'])
+       else
+         handler.onSubpageNotFound?(pageId)
+    ).fail(
+      ->
+        handler.onReadFromSubpageError()
+    ).always(
+      ->
+        handler.onEndReadingSubpage()
+    )
 
   @save: (pagename, string, handler)->
-    mw.loader.using 'mediawiki.api.edit', ->
-        api = new (mw.Api)
-        api.postWithEditToken(
-          action: 'edit'
-          title: pagename
-          summary: '[[Обговорення користувача:AS/rast.js|serialize]]'
-          text: string
-        ).done(
-          ->
-            handler.onSavedToSubpage()
-        ).fail(
-          ->
-            handler.onSaveToSubpageError()
-        ).always(
-          ->
-            handler.onEndSavingToSubpage()
-        )
+    api = new (mw.Api)
+    api.postWithEditToken(
+      action: 'edit'
+      title: pagename
+      summary: '[[Обговорення користувача:AS/rast.js|serialize]]'
+      text: string
+    ).done(
+      ->
+        handler.onSavedToSubpage()
+    ).fail(
+      ->
+        handler.onSaveToSubpageError()
+    ).always(
+      ->
+        handler.onEndSavingToSubpage()
+    )
 
 $ ->
   window.editTools =
@@ -1358,9 +1354,8 @@ $ ->
 
     setupOnEditPage: ->
       if mw.config.get('wgAction') == 'edit' or mw.config.get('wgAction') == 'submit'
-        mw.loader.using ['mediawiki.cookie', 'oojs-ui', 'jquery.colorUtil'], ->
-          rast.installJQueryPlugins()
-          editTools.init()
+        rast.installJQueryPlugins()
+        editTools.init()
 
     onSlotSaved: ->
       @refresh()
@@ -1370,4 +1365,7 @@ $ ->
   rast.PlainObjectParser.processShortcut = editTools.processShortcut;
   rast.PlainObjectParser.addOnloadFunc = editTools.addOnloadFunc;
 
-  editTools.setupOnEditPage()
+  mw.loader.using(['mediawiki.cookie', 'oojs-ui', 'jquery.ui.sortable', 'jquery.ui.droppable', 'jquery.ui.draggable', 'jquery.tipsy', 'mediawiki.api.edit'], ->
+    editTools.setupOnEditPage()    
+  )
+ 
