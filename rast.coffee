@@ -1493,6 +1493,6 @@ $ ->
   rast.PlainObjectParser.processShortcut = editTools.processShortcut;
   rast.PlainObjectParser.addOnloadFunc = editTools.addOnloadFunc;
 
-  mw.loader.using(['mediawiki.cookie', 'oojs-ui', 'jquery.ui.sortable', 'jquery.ui', 'jquery.tipsy', 'mediawiki.api'], ->
+  mw.loader.using(['mediawiki.cookie', 'oojs-ui', 'jquery.ui', 'jquery.tipsy', 'mediawiki.api'], ->
     editTools.setupOnEditPage()    
   )
