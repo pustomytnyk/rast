@@ -155,6 +155,127 @@ window.rast =
   numericList: (s) ->
     rast.perLineReplace s, /(([\*#]*)\s*)(.+)/g, '#$2 $3'
 
+  searchAndReplace:
+    getReplaceForm: ->
+      '\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div id="et-replace-message">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div id="et-replace-nomatch">Нема збігів</div>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div id="et-replace-success">Заміни виконано</div>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div id="et-replace-emptysearch">Вкажіть рядок до пошуку</div>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div id="et-replace-invalidregex">Неправильний регулярний вираз</div>\u0009\u0009\u0009\u0009\u0009\u0009\u0009</div>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span class="et-field-wrapper">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<label for="et-replace-search" style="float: left; min-width: 6em;">Шукати</label>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span style="display: block; overflow: hidden;">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009  <input type="text" id="et-replace-search" style="width: 100%;"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div style="clear: both;"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span class="et-field-wrapper">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<label for="et-replace-replace" style="float: left; min-width: 6em;">Заміна</label>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span style="display: block; overflow: hidden;">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009  <input type="text" id="et-replace-replace" style="width: 100%;"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div style="clear: both;"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<input id="et-tool-replace-button-findnext" type="button" value="Шукати" />\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<input id="et-tool-replace-button-replace" type="button" value="Замінити" />\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<input id="et-tool-replace-button-replaceall" type="button" value="Замінити все" />\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span class="et-field-wrapper">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<input type="checkbox" id="et-replace-case"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<label for="et-replace-case">Враховувати регістр</label>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span class="et-field-wrapper">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<input type="checkbox" id="et-replace-regex"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<label for="et-replace-regex">Регулярний вираз</label>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009'
+
+    replaceFormInit: ->
+      comsole.log 'adsf'
+      rast.searchAndReplace.offset = 0
+      rast.searchAndReplace.matchIndex = 0
+      $(document).off('click', '#et-tool-replace-button-findnext').on 'click', '#et-tool-replace-button-findnext', (e) ->
+        rast.searchAndReplace.doSearchReplace 'find'
+      $(document).off('click', '#et-tool-replace-button-replace').on 'click', '#et-tool-replace-button-replace', (e) ->
+        rast.searchAndReplace.doSearchReplace 'replace'
+      $(document).off('click', '#et-tool-replace-button-replaceall').on 'click', '#et-tool-replace-button-replaceall', (e) ->
+        rast.searchAndReplace.doSearchReplace 'replaceAll'
+      $('#et-replace-nomatch, #et-replace-success,\u0009\u0009\u0009 #et-replace-emptysearch, #et-replace-invalidregex').hide()
+
+    doSearchReplace: (mode) ->
+      offset = undefined
+      textRemainder = undefined
+      regex = undefined
+      index = undefined
+      i = undefined
+      start = undefined
+      end = undefined
+      $('#et-replace-nomatch, #et-replace-success,\u0009\u0009\u0009 #et-replace-emptysearch, #et-replace-invalidregex').hide()
+      # Search string cannot be empty
+      searchStr = $('#et-replace-search').val()
+      if searchStr == ''
+        $('#et-replace-emptysearch').show()
+        return
+      # Replace string can be empty
+      replaceStr = $('#et-replace-replace').val()
+      # Prepare the regular expression flags
+      flags = 'm'
+      matchCase = $('#et-replace-case').is(':checked')
+      if !matchCase
+        flags += 'i'
+      isRegex = $('#et-replace-regex').is(':checked')
+      if !isRegex
+        searchStr = mw.RegExp.escape(searchStr)
+      if mode == 'replaceAll'
+        flags += 'g'
+      try
+        regex = new RegExp(searchStr, flags)
+      catch e
+        $('#et-replace-invalidregex').show()
+        return
+      $textarea = rast.$getTextarea()
+      text = $textarea.textSelection('getContents')
+      match = false
+      if mode != 'replaceAll'
+        if mode == 'replace'
+          offset = rast.searchAndReplace.matchIndex
+        else
+          offset = rast.searchAndReplace.offset
+        textRemainder = text.substr(offset)
+        match = textRemainder.match(regex)
+      if !match
+        # Search hit BOTTOM, continuing at TOP
+        # TODO: Add a "Wrap around" option.
+        offset = 0
+        textRemainder = text
+        match = textRemainder.match(regex)
+      if !match
+        $('#et-replace-nomatch').show()
+        return
+      if mode == 'replaceAll'
+        newText = text.replace(regex, replaceStr)
+        $textarea.select().textSelection 'encapsulateSelection',
+          'peri': newText
+          'replace': true
+        $('#et-replace-success').text('Здійснено замін: ' + match.length).show()
+        rast.searchAndReplace.offset = 0
+        rast.searchAndReplace.matchIndex = 0
+      else
+        if mode == 'replace'
+          actualReplacement = undefined
+          if isRegex
+            # If backreferences (like $1) are used, the actual actual replacement string will be different
+            actualReplacement = match[0].replace(regex, replaceStr)
+          else
+            actualReplacement = replaceStr
+          if match
+            # Do the replacement
+            $textarea.textSelection 'encapsulateSelection',
+              'peri': actualReplacement
+              'replace': true
+            # Reload the text after replacement
+            text = $textarea.textSelection('getContents')
+          # Find the next instance
+          offset = offset + match[0].length + actualReplacement.length
+          textRemainder = text.substr(offset)
+          match = textRemainder.match(regex)
+          if match
+            start = offset + match.index
+            end = start + match[0].length
+          else
+            # If no new string was found, try searching from the beginning.
+            # TODO: Add a "Wrap around" option.
+            textRemainder = text
+            match = textRemainder.match(regex)
+            if match
+              start = match.index
+              end = start + match[0].length
+            else
+              # Give up
+              start = 0
+              end = 0
+        else
+          start = offset + match.index
+          end = start + match[0].length
+        rast.searchAndReplace.matchIndex = start
+        $textarea.textSelection 'setSelection',
+          'start': start
+          'end': end
+        $textarea.textSelection 'scrollToCaretPosition'
+        rast.searchAndReplace.offset = end
+        context = rast.searchAndReplace.context
+        $textarea[0].focus()
+  
+    
   ieVersion: ->
           #http://james.padolsey.com/javascript/detect-ie-in-js-using-conditional-comments/
           v = 3
