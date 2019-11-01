@@ -828,11 +828,17 @@ class rast.SlotAttributesEditor
         value = @slot[attribute.name]
         type = attribute.type
         OOinput =
-          if type == 'string' || type == 'text'
-            fieldOptions = { value: value, multiline: type == 'text', rows: 3, autosize: true }
+          if type == 'string'
+            fieldOptions = { value: value }
             {
               getValue: 'getValue',
               OOobject: new OO.ui.TextInputWidget(fieldOptions)
+            }
+          else if type == 'text'
+            fieldOptions = { value: value, rows: 3, autosize: true }
+            {
+              getValue: 'getValue',
+              OOobject: new OO.ui.MultilineTextInputWidget(fieldOptions)
             }
           else if type == 'boolean'
             {
@@ -1491,4 +1497,3 @@ $ ->
   mw.loader.using(['mediawiki.cookie', 'oojs-ui', 'jquery.ui.sortable', 'jquery.ui', 'jquery.tipsy', 'mediawiki.api'], ->
     editTools.setupOnEditPage()    
   )
- 
