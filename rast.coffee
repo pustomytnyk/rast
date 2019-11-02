@@ -3,6 +3,12 @@ if unsafeWindow? # для Tampermonkey
   window.etSubsets = unsafeWindow.etSubsets
 
 window.rast =
+  trimDeprecatedFunc: (string)->
+    res = $.trim(string)
+    matches = res.match(/^\s*function\s*\(\s*\)\s*\{[\s\n]*((.|\n)*)[\s\n]*\}\s*$/)
+    res = matches[1] || '' if matches
+    res
+
   clone: (object)->
     result = Object.assign({}, object)
     Object.setPrototypeOf(result, Object.getPrototypeOf(object))
@@ -131,7 +137,7 @@ window.rast =
 
   name: (constructor)->
     'rast.' + constructor.name
-  
+
   processSelection: (txtFunc) ->
     $textarea = rast.$getTextarea()
     txt = $textarea.getSelection()
@@ -193,7 +199,7 @@ window.rast =
         flags += 'i'
       isRegex = $('#et-replace-regex').is(':checked')
       if !isRegex
-        searchStr = mw.RegExp.escape(searchStr)
+        searchStr = mw.util.escapeRegExp(searchStr)
       if mode == 'replaceAll'
         flags += 'g'
       try
@@ -273,8 +279,8 @@ window.rast =
         rast.searchAndReplace.offset = end
         context = rast.searchAndReplace.context
         $textarea[0].focus()
-  
-    
+
+
   ieVersion: ->
           #http://james.padolsey.com/javascript/detect-ie-in-js-using-conditional-comments/
           v = 3
@@ -476,7 +482,7 @@ class rast.Drawer
       @drawMessage()
       @drawNavigation()
       @drawPanels()
-        
+
     drawMessage: ->
       @$container.append(@message)
 
@@ -933,23 +939,35 @@ class rast.SlotAttributes
     result
 
 class rast.Slot
+  @editableAttributes: new rast.SlotAttributes({})
 
-    @editableAttributes: new rast.SlotAttributes({})
+  @editorClass: rast.SlotAttributesEditor
 
-    @editorClass: rast.SlotAttributesEditor
-
-    constructor: (options = {}) ->
+  constructor: (options = {}) ->
       for attribute in @constructor.editableAttributes.toArray()
         @[attribute.name] = attribute.default
       $.extend @, options, 'class': 'rast.' + @constructor.name
 
-    generateEditHtml: ->
+  generateEditHtml: ->
       $element = @generateHtml()
       $($element).addClass('editedSlot')
       $element
 
-class rast.PlainTextSlot extends rast.Slot
+  toJSON: ->
+    defaults = new(@constructor)
+    defaults = defaults.sanitizedAttributes()
+    sanitized = @.sanitizedAttributes()
+    res = {}
+    Object.keys(sanitized).forEach (key) =>
+      res[key] = sanitized[key] if (sanitized[key] != defaults[key]) && sanitized.hasOwnProperty(key)
+    res['class'] = @['class']
+    delete res['id']
+    res
 
+  sanitizedAttributes: ->
+    rast.clone(@)
+
+class rast.PlainTextSlot extends rast.Slot
     @caption: 'Простий текст'
 
     @editableAttributes: new rast.SlotAttributes({ view:
@@ -985,17 +1003,17 @@ class rast.InsertionSlot extends rast.Slot
         { name: 'captionAsHtml', caption: 'Сприймати напис, як html-код?', type: 'boolean', default: false }
       ]
       functionality: [
-        { 
-          name: 'insertion', 
-          caption: 'Текст вставки', 
-          type: 'text', 
-          default: '$', 
-          labelAlignment: 'top', 
-          help: '''Символ долара "$" буде замінено на виділений текст. Перший символ додавання "+" позначає місце каретки після вставлення. 
-            Якщо хочете екранувати ці символи, поставте "\\" перед потрібним символом; наприклад "\\$" вставлятиме знак долара.''' 
+        {
+          name: 'insertion',
+          caption: 'Текст вставки',
+          type: 'text',
+          default: '$',
+          labelAlignment: 'top',
+          help: '''Символ долара "$" буде замінено на виділений текст. Перший символ додавання "+" позначає місце каретки після вставлення.
+            Якщо хочете екранувати ці символи, поставте "\\" перед потрібним символом; наприклад "\\$" вставлятиме знак долара.'''
         }
         { name: 'useClickFunc', caption: 'Замість вставляння виконати іншу дію?', type: 'boolean', default: false }
-        { name: 'clickFunc', caption: 'Інша дія (при клацанні)', type: 'text', default: 'function(){  }', labelAlignment: 'top' }
+        { name: 'clickFunc', caption: 'Інша дія (при клацанні)', type: 'text', default: '', labelAlignment: 'top' }
       ]
     })
 
@@ -1004,14 +1022,14 @@ class rast.InsertionSlot extends rast.Slot
       tags = rast.PlainObjectParser.parseInsertion(insertion, '')
       rast.$getTextarea().insertTag(tags.tagOpen, tags.tagClose)
 
-    toJSON: ->
+    sanitizedAttributes: ->
       copy = rast.clone(@)
-      copy.clickFunc = @clickFunc.toString() if @clickFunc
+      copy.clickFunc = rast.trimDeprecatedFunc(@clickFunc)
       copy
 
     generateEditHtml: ->
       $elem = super()
-      $elem.attr('title', (@useClickFunc && @clickFunc.toString()) || @insertion)
+      $elem.attr('title', (@useClickFunc && @clickFunc) || @insertion)
       $elem.append($('<div class="overlay">'))
 
     generateCommonHtml: (styles)->
@@ -1042,7 +1060,7 @@ class rast.InsertionSlot extends rast.Slot
       $elem.click (event)=>
         event.preventDefault()
         if @useClickFunc
-          eval('(' + @clickFunc + ')()')
+          eval(@clickFunc)
         else
           rast.InsertionSlot.insertFunc(@insertion)
       $elem
@@ -1056,17 +1074,17 @@ class rast.MultipleInsertionsSlot extends rast.Slot
         { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
       ]
       functionality: [
-        { 
+        {
           name: 'insertion'
           caption: 'Вставки'
           type: 'text'
           default: 'вставка_1 ·п вставка_2'
           labelAlignment: 'top'
-          help: '''Все, що розділене символами пробілу, вважається окремою коміркою. 
-            Якщо комірка закірчується символом "п", вона вважатиметься не вставкою, а простим текстом. 
-            Якщо хочете включити пробіл у вставку, пишіть нижнє підкреслення: "_". 
-            Символ долара "$" буде замінено на виділений текст. Перший символ додавання "+" позначає місце каретки після вставлення. 
-            Якщо хочете екранувати ці символи, поставте "\\" перед потрібним символом; наприклад "\\$" вставлятиме знак долара.''' 
+          help: '''Все, що розділене символами пробілу, вважається окремою коміркою.
+            Якщо комірка закірчується символом "п", вона вважатиметься не вставкою, а простим текстом.
+            Якщо хочете включити пробіл у вставку, пишіть нижнє підкреслення: "_".
+            Символ долара "$" буде замінено на виділений текст. Перший символ додавання "+" позначає місце каретки після вставлення.
+            Якщо хочете екранувати ці символи, поставте "\\" перед потрібним символом; наприклад "\\$" вставлятиме знак долара.'''
         }
       ]
     })
@@ -1110,21 +1128,22 @@ class rast.HtmlSlot extends rast.Slot
         { name: 'html', type: 'text', default: '<span>html</span>', caption: 'HTML', labelAlignment: 'top' }
       ]
       functionality: [
-        { name: 'onload', type: 'text', default: 'function(){  }', caption: 'JavaScript, що виконається при ініціалізації', labelAlignment: 'top' }
+        { name: 'onload', type: 'text', default: '', caption: 'JavaScript, що виконається при ініціалізації', labelAlignment: 'top' }
       ]
     })
 
-    toJSON: ->
+    sanitizedAttributes: ->
       copy = rast.clone(@)
-      copy.onload = @onload.toString() if @onload
+      copy.onload = rast.trimDeprecatedFunc(@onload)
       copy
 
     constructor: (options) ->
       super(options)
-      if typeof @onload is 'string'
-        @onload = eval('(' + @onload + ')')
-      if typeof @onload is 'function'
-        editTools.addOnloadFunc(@onload)
+      @onload = rast.trimDeprecatedFunc(@onload)
+      if @onload.length
+        editTools.addOnloadFunc(=>
+          eval(@onload)
+        )
 
     generateEditHtml: ->
       $elem = super()
@@ -1205,13 +1224,13 @@ $ ->
     #edittools .etPanel .slots [data-id]:hover { z-index: 1; text-decoration: none; }
     #edittools .etPanel .preview [data-id] { display: inline; padding: 0px 2px; cursor: pointer; }
     #edittools .etPanel > [data-id] { display: inline; padding: 0px 2px; cursor: pointer; }
-    #edittools { min-height: 20px; } 
-    #edittools .rastMenu.view { position: absolute; left: 0px; } 
-    #edittools .rastMenu.edit { border-bottom: solid #aaaaaa 1px; padding: 2px 6px; } 
-    #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; margin: 5px 0px; } 
-    #edittools .slots.ui-sortable .emptyHint {  } 
-    #edittools .editedSlot { 
-      cursor: pointer; 
+    #edittools { min-height: 20px; }
+    #edittools .rastMenu.view { position: absolute; left: 0px; }
+    #edittools .rastMenu.edit { border-bottom: solid #aaaaaa 1px; padding: 2px 6px; }
+    #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; margin: 5px 0px; }
+    #edittools .slots.ui-sortable .emptyHint {  }
+    #edittools .editedSlot {
+      cursor: pointer;
       min-width: 1em;
       min-height: 1em;
       border: 1px solid grey;
@@ -1219,33 +1238,33 @@ $ ->
       position: relative;
       display: block;
     }
-    #edittools .editedSlot .overlay { width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; } 
-    #edittools .slotClass { cursor: copy; } 
+    #edittools .editedSlot .overlay { width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; }
+    #edittools .slotClass { cursor: copy; }
     #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; }
-    #edittools .gear { 
-      background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Simpleicons_Interface_gear-wheel-in-black.svg/15px-Simpleicons_Interface_gear-wheel-in-black.svg.png'); 
-      height: 15px;;
-      width: 15px; 
+    #edittools .gear {
+      background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Simpleicons_Interface_gear-wheel-in-black.svg/15px-Simpleicons_Interface_gear-wheel-in-black.svg.png');
+      height: 15px;
+      width: 15px;
       background-repeat: no-repeat;
       background-size: cover;
-      display: inline-block; } 
-    #edittools .ui-state-highlight { 
-      min-width: 1em; 
-      min-height: 1em; 
+      display: inline-block; }
+    #edittools .ui-state-highlight {
+      min-width: 1em;
+      min-height: 1em;
       display: inline-block;
-    } 
-    #edittools .ui-sortable-helper { min-width: 1em; min-height: 1em; } 
-    .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; } 
-    .specialchars-tabs a{ display: block; } 
-    #edittools { border: solid #aaaaaa 1px; } 
-    .mw-editTools a{ cursor: pointer; } 
-    .overflowHidden { overflow: hidden; } 
-    .specialchars-tabs .asnav-selectedtab{ background: #F0F0F0; } 
+    }
+    #edittools .ui-sortable-helper { min-width: 1em; min-height: 1em; }
+    .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; }
+    .specialchars-tabs a{ display: block; }
+    #edittools { border: solid #aaaaaa 1px; }
+    .mw-editTools a{ cursor: pointer; }
+    .overflowHidden { overflow: hidden; }
+    .specialchars-tabs .asnav-selectedtab{ background: #F0F0F0; }
     #edittools .highlighted { opacity: 0.5; }
     #edittools [data-id]:hover { border-color: red; }
     #edittools .notFoundWarning { padding: 4px; }
     #edittools .newPanelButton { padding: 4px; border-bottom: solid #aaaaaa 1px; }
-    #edittools .removeIcon { 
+    #edittools .removeIcon {
       background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Ambox_delete_soft.svg/15px-Ambox_delete_soft.svg.png?uselang=uk');
       display: inline-block;
       width: 15px;
@@ -1255,9 +1274,9 @@ $ ->
     }
     #edittools .panelNameLabel { margin-right: 5px; }
     #edittools .panelRemoveButton { margin-left: 20px; }
-    #edittools .etPanel > .slots { 
+    #edittools .etPanel > .slots {
       padding: 6px 1px;
-      border: 1px black dashed; 
+      border: 1px black dashed;
       overflow: auto;
       max-height: 240px;
     }
@@ -1337,9 +1356,9 @@ $ ->
       setTimeout(
         =>
           @fireOnloadFuncs()
-        0  
+        0
       )
-      
+
       $tabs.on 'asNav:select', (ev, selectedId) ->
         mw.cookie.set editTools.cookieName + 'Selected', selectedId
 
@@ -1413,7 +1432,7 @@ $ ->
       $tabs.throbber(true, 'prepend')
       @readFromSubpage()
 
-    docLink: 'https://uk.wikipedia.org/wiki/%D0%9A%D0%BE%D1%80%D0%B8%D1%81%D1%82%D1%83%D0%B2%D0%B0%D1%87:AS/%D0%9F%D0%9F%D0%A1-2'  
+    docLink: 'https://uk.wikipedia.org/wiki/%D0%9A%D0%BE%D1%80%D0%B8%D1%81%D1%82%D1%83%D0%B2%D0%B0%D1%87:AS/%D0%9F%D0%9F%D0%A1-2'
 
     editButtonHtml: ->
       @drawer.$editButtonIcon().prop('outerHTML')
@@ -1493,6 +1512,8 @@ $ ->
   rast.PlainObjectParser.processShortcut = editTools.processShortcut;
   rast.PlainObjectParser.addOnloadFunc = editTools.addOnloadFunc;
 
-  mw.loader.using(['mediawiki.cookie', 'oojs-ui', 'mediawiki.api'], ->
-    editTools.setupOnEditPage()    
+  $(->
+      mw.loader.using(['mediawiki.cookie', 'oojs-ui', 'mediawiki.api'], ->
+        editTools.setupOnEditPage()
+      )
   )
