@@ -3,6 +3,28 @@ if unsafeWindow? # для Tampermonkey
   window.etSubsets = unsafeWindow.etSubsets
 
 window.rast =
+  migrateUser: (username)->
+    page = "User:" + username + "/" + editTools.subpageStorageName
+    editTools.readFromSubpage page, ->
+      editTools.subsets.subsets.forEach (subset)->
+        subset.slots.forEach (slot)->
+          if slot.clickFunc
+            slot.clickFunc = rast.trimDeprecatedFunc(slot.clickFunc)
+            if slot.clickFunc.includes('return s.toLowerCase()')
+              slot.clickFunc = 'rast.processSelection(function(s) { return s.toLowerCase(); })'
+            if slot.clickFunc.includes('rast.linkifyList')
+              slot.clickFunc = 'rast.processSelection(rast.linkifyList)'
+            if slot.clickFunc.includes('rast.simpleList')
+              slot.clickFunc = 'rast.processSelection(rast.simpleList)'
+            if slot.clickFunc.includes('rast.numericList')
+              slot.clickFunc = 'rast.processSelection(rast.numericList)'
+          if slot.onload
+            slot.clickFunc = rast.trimDeprecatedFunc(slot.clickFunc)
+            if slot.onload.includes('doSearchReplace')
+              slot.onload = "rast.searchAndReplace.offset = 0;\n        rast.searchAndReplace.matchIndex = 0;\n        $(document).on('click', '#et-tool-replace-button-findnext', function(e) {\n          rast.searchAndReplace.doSearchReplace('find');\n        });\n        $(document).on('click', '#et-tool-replace-button-replace', function(e) {\n          rast.searchAndReplace.doSearchReplace('replace');\n        });\n        $(document).on('click', '#et-tool-replace-button-replaceall', function(e) {\n          rast.searchAndReplace.doSearchReplace('replaceAll');\n        });\n        $('#et-replace-nomatch, #et-replace-success, #et-replace-emptysearch, #et-replace-invalidregex').hide();"
+
+      #editTools.serializeToPage(page, 'оновлення формату')
+
   trimDeprecatedFunc: (string)->
     res = $.trim(string)
     matches = res.match(/^\s*function\s*\(\s*\)\s*\{[\s\n]*((.|\n)*)[\s\n]*\}\s*$/)
@@ -162,20 +184,6 @@ window.rast =
     rast.perLineReplace s, /(([\*#]*)\s*)(.+)/g, '#$2 $3'
 
   searchAndReplace:
-    getReplaceForm: ->
-      '\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div id="et-replace-message">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div id="et-replace-nomatch">Нема збігів</div>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div id="et-replace-success">Заміни виконано</div>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div id="et-replace-emptysearch">Вкажіть рядок до пошуку</div>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div id="et-replace-invalidregex">Неправильний регулярний вираз</div>\u0009\u0009\u0009\u0009\u0009\u0009\u0009</div>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span class="et-field-wrapper">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<label for="et-replace-search" style="float: left; min-width: 6em;">Шукати</label>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span style="display: block; overflow: hidden;">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009  <input type="text" id="et-replace-search" style="width: 100%;"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div style="clear: both;"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span class="et-field-wrapper">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<label for="et-replace-replace" style="float: left; min-width: 6em;">Заміна</label>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span style="display: block; overflow: hidden;">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009  <input type="text" id="et-replace-replace" style="width: 100%;"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<div style="clear: both;"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<input id="et-tool-replace-button-findnext" type="button" value="Шукати" />\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<input id="et-tool-replace-button-replace" type="button" value="Замінити" />\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<input id="et-tool-replace-button-replaceall" type="button" value="Замінити все" />\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span class="et-field-wrapper">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<input type="checkbox" id="et-replace-case"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<label for="et-replace-case">Враховувати регістр</label>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<span class="et-field-wrapper">\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<input type="checkbox" id="et-replace-regex"/>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009<label for="et-replace-regex">Регулярний вираз</label>\u0009\u0009\u0009\u0009\u0009\u0009\u0009\u0009</span>\u0009\u0009\u0009'
-
-    replaceFormInit: ->
-      rast.searchAndReplace.offset = 0
-      rast.searchAndReplace.matchIndex = 0
-      $(document).off('click', '#et-tool-replace-button-findnext').on 'click', '#et-tool-replace-button-findnext', (e) ->
-        rast.searchAndReplace.doSearchReplace 'find'
-      $(document).off('click', '#et-tool-replace-button-replace').on 'click', '#et-tool-replace-button-replace', (e) ->
-        rast.searchAndReplace.doSearchReplace 'replace'
-      $(document).off('click', '#et-tool-replace-button-replaceall').on 'click', '#et-tool-replace-button-replaceall', (e) ->
-        rast.searchAndReplace.doSearchReplace 'replaceAll'
-      $('#et-replace-nomatch, #et-replace-success,\u0009\u0009\u0009 #et-replace-emptysearch, #et-replace-invalidregex').hide()
-
     doSearchReplace: (mode) ->
       offset = undefined
       textRemainder = undefined
@@ -184,7 +192,7 @@ window.rast =
       i = undefined
       start = undefined
       end = undefined
-      $('#et-replace-nomatch, #et-replace-success,\u0009\u0009\u0009 #et-replace-emptysearch, #et-replace-invalidregex').hide()
+      $('#et-replace-nomatch, #et-replace-success, #et-replace-emptysearch, #et-replace-invalidregex').hide()
       # Search string cannot be empty
       searchStr = $('#et-replace-search').val()
       if searchStr == ''
@@ -1024,7 +1032,7 @@ class rast.InsertionSlot extends rast.Slot
 
     sanitizedAttributes: ->
       copy = rast.clone(@)
-      copy.clickFunc = rast.trimDeprecatedFunc(@clickFunc)
+      copy.clickFunc = $.trim(@clickFunc)
       copy
 
     generateEditHtml: ->
@@ -1134,15 +1142,15 @@ class rast.HtmlSlot extends rast.Slot
 
     sanitizedAttributes: ->
       copy = rast.clone(@)
-      copy.onload = rast.trimDeprecatedFunc(@onload)
+      copy.onload = $.trim(@onload)
       copy
 
     constructor: (options) ->
       super(options)
-      @onload = rast.trimDeprecatedFunc(@onload)
+      @onload = $.trim(@onload)
       if @onload.length
         editTools.addOnloadFunc(=>
-          eval(@onload)
+          try eval(@onload)
         )
 
     generateEditHtml: ->
@@ -1181,12 +1189,12 @@ class rast.PageStorage
         handler.onEndReadingSubpage()
     )
 
-  @save: (pagename, string, handler)->
+  @save: (pagename, string, handler, summary)->
     api = new (mw.Api)
     api.postWithEditToken(
       action: 'edit'
       title: pagename
-      summary: '[[Обговорення користувача:AS/rast.js|serialize]]'
+      summary: summary
       text: string
     ).done(
       ->
@@ -1451,7 +1459,7 @@ $ ->
     subpageStorageName: 'AStools.js',
 
     saveToSubpage: ->
-      @serializeToPage('User:' + mw.config.get('wgUserName') + '/' + @subpageStorageName)
+      @serializeToPage('User:' + mw.config.get('wgUserName') + '/' + @subpageStorageName, '[[Обговорення користувача:AS/rast.js|serialize]]')
 
     trackingPage: 'User:AS/track'
 
@@ -1466,7 +1474,7 @@ $ ->
     subpageName: ->
       'User:' + mw.config.get('wgUserName') + '/' + @subpageStorageName
 
-    readFromSubpage: (pagename)->
+    readFromSubpage: (pagename, doneFunc)->
       @reset()
       json = rast.PageStorage.load(
         pagename || @subpageName()
@@ -1476,6 +1484,7 @@ $ ->
           @subsets.deserialize(serializedTools)
           @subsetsUpdated()
           @refresh()
+          doneFunc() if doneFunc?
         ,
         @
       )
