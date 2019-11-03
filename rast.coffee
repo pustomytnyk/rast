@@ -288,18 +288,7 @@ window.rast =
         context = rast.searchAndReplace.context
         $textarea[0].focus()
 
-
-  ieVersion: ->
-          #http://james.padolsey.com/javascript/detect-ie-in-js-using-conditional-comments/
-          v = 3
-          div = document.createElement('div')
-          all = div.getElementsByTagName('i')
-          while (div.innerHTML = '<!--[if gt IE ' + ++v + ']><i></i><![endif]-->'; all[0])
-            0
-          if v > 4 then v else undefined
-
 class rast.PanelDrawer
-
   constructor: (@$panel, @subsetWrapper, @index, @mode, @subsets, @eventsHandler)->
 
   draw: ->
@@ -389,7 +378,6 @@ class rast.PanelDrawer
     rast.arrayMove(@subsetWrapper.slots, slotIndex, newSlotIndex)
 
 class rast.Drawer
-
     $editButtonIcon: ->
       $('<div class="gear">')
 
@@ -515,7 +503,6 @@ class rast.Drawer
       $panel
 
 class rast.PlainObjectParser
-
     @charinsertDivider: ' '
 
     @parseTokens: (arr, hotkeysHandler) ->
@@ -793,7 +780,6 @@ class rast.SubsetsManager
 
   # діалогове віконце. У нього вставляються поля для візуального редагування символа.
 class rast.UIwindow
-
     @show: ($content)->
       EditDialog = (config) ->
         EditDialog.super.call this, config
@@ -828,7 +814,6 @@ class rast.UIwindow
 
   # генерує поля для редагування символа. Для цього кожен клас символів має властивість editableAttributes.
 class rast.SlotAttributesEditor
-
     constructor: (options)->
       @slot = options.slot
       @slotsManager = options.slotsManager
@@ -967,7 +952,7 @@ class rast.Slot
     sanitized = @.sanitizedAttributes()
     res = {}
     Object.keys(sanitized).forEach (key) =>
-      res[key] = sanitized[key] if (sanitized[key] != defaults[key]) && sanitized.hasOwnProperty(key)
+      res[key] = sanitized[key] if (sanitized[key] != defaults[key]) && defaults.hasOwnProperty(key)
     res['class'] = @['class']
     delete res['id']
     res
@@ -1001,7 +986,6 @@ class rast.PlainTextSlot extends rast.Slot
       $elem
 
 class rast.InsertionSlot extends rast.Slot
-
     @caption: 'Одна вставка'
 
     @editableAttributes: new rast.SlotAttributes({
@@ -1074,7 +1058,6 @@ class rast.InsertionSlot extends rast.Slot
       $elem
 
 class rast.MultipleInsertionsSlot extends rast.Slot
-
     @caption: 'Набір вставок'
 
     @editableAttributes: new rast.SlotAttributes({
@@ -1128,7 +1111,6 @@ class rast.MultipleInsertionsSlot extends rast.Slot
       $elem
 
 class rast.HtmlSlot extends rast.Slot
-
     @caption: 'Довільний код'
 
     @editableAttributes: new rast.SlotAttributes({
@@ -1167,7 +1149,6 @@ class rast.HtmlSlot extends rast.Slot
       $wrapper
 
 class rast.PageStorage
-
   @load: (pagename, onLoaded, handler)->
     api = new (mw.Api)
     api.get(
@@ -1301,9 +1282,8 @@ $ ->
     createEditTools: ->
       $tabs = $('<div></div>').attr('id', @id)
 
-      event = if rast.ieVersion() < 9 then 'mousedown' else 'click'
       self = @
-      $tabs.on event, '.asnav-content .etPanel .slots [data-id]', ($e) ->
+      $tabs.on 'click', '.asnav-content .etPanel .slots [data-id]', ($e) ->
         if editTools.mode == 'edit'
           id = parseInt($(this).closest('.editedSlot').attr('data-id'))
           slot = editTools.temporarySubsets.slotById(id)
