@@ -1,3 +1,32 @@
+window.migrator =
+  migrateUser: (username)->
+    page = "User:" + username + "/" + editTools.subpageStorageName
+    editTools.readFromSubpage page, ->
+      editTools.subsets.subsets.forEach (subset)->
+        subset.slots.forEach (slot)->
+          if slot.clickFunc
+            slot.clickFunc = migrator.trimDeprecatedFunc(slot.clickFunc)
+            if slot.clickFunc.includes('return s.toLowerCase()')
+              slot.clickFunc = 'rast.processSelection(function(s) { return s.toLowerCase(); })'
+            if slot.clickFunc.includes('rast.linkifyList')
+              slot.clickFunc = 'rast.processSelection(rast.linkifyList)'
+            if slot.clickFunc.includes('rast.simpleList')
+              slot.clickFunc = 'rast.processSelection(rast.simpleList)'
+            if slot.clickFunc.includes('rast.numericList')
+              slot.clickFunc = 'rast.processSelection(rast.numericList)'
+          if slot.onload
+            slot.clickFunc = migrator.trimDeprecatedFunc(slot.clickFunc)
+            if slot.onload.includes('doSearchReplace')
+              slot.onload = "rast.searchAndReplace.offset = 0;\n        rast.searchAndReplace.matchIndex = 0;\n        $(document).on('click', '#et-tool-replace-button-findnext', function(e) {\n          rast.searchAndReplace.doSearchReplace('find');\n        });\n        $(document).on('click', '#et-tool-replace-button-replace', function(e) {\n          rast.searchAndReplace.doSearchReplace('replace');\n        });\n        $(document).on('click', '#et-tool-replace-button-replaceall', function(e) {\n          rast.searchAndReplace.doSearchReplace('replaceAll');\n        });\n        $('#et-replace-nomatch, #et-replace-success, #et-replace-emptysearch, #et-replace-invalidregex').hide();"
+
+      #editTools.serializeToPage(page, 'оновлення формату')
+
+  trimDeprecatedFunc: (string)->
+    res = $.trim(string)
+    matches = res.match(/^\s*function\s*\(\s*\)\s*\{[\s\n]*((.|\n)*)[\s\n]*\}\s*$/)
+    res = matches[1] || '' if matches
+    res
+
 if unsafeWindow? # для Tampermonkey
   window.$ = unsafeWindow.$
 
@@ -298,24 +327,30 @@ class rast.PanelDrawer
 
   drawEditMode: ->
     # поле вводу для назви панелі
-    nameInput = new OO.ui.TextInputWidget( { value: @subsetWrapper.caption, label: 'Назва панелі' })
+    nameLabel = new OO.ui.LabelWidget({ label: 'Назва панелі:' })
+    nameInput = new OO.ui.TextInputWidget( { value: @subsetWrapper.caption })
+    nameInput.$element.on 'keydown', (event)->
+      if (event.keyCode == 13)
+        event.preventDefault();
+        false
     nameInput.$element.change { subsetWrapper: @subsetWrapper }, @eventsHandler.onTabNameChanged
-    @$panel.append(nameInput.$element)
 
     removeButton =  new OO.ui.ButtonWidget({ label: 'Вилучити цю панель', flags: 'destructive' })
     removeButton.on 'click', =>
       @eventsHandler.onRemoveSubsetClick(@subsetWrapper)
-    @$panel.append(removeButton.$element)
+    layout = new OO.ui.HorizontalLayout({ items: [nameLabel, nameInput, removeButton] });
+    @$panel.append(layout.$element)
 
+    $descLabel = $('<span>')
+    $descLabel.text('Ви можете перетягувати комірки, щоб змінити їхній порядок. Клацніть по комірці, щоб редагувати її. Щоб додати комірку, перетягніть нижче один з цих видів:')
+    @$panel.append($descLabel)
+    @drawSlotClasses(@$panel)
     $slots = $('<div class="slots">')
     @$panel.append($slots)
-
     generateMethod = 'generateEditHtml'
-
     @sortableSlots($slots)
-
     if !@subsetWrapper.slots.length
-      $slots.append('<span>Щоб додати комірку, сюди перетягніть потрібний вид з бічної панелі.</span>')
+      $slots.append('<span>Щоб додати комірку, сюди перетягніть потрібний вид.</span>')
     else
       @generateHtml($slots, @subsetWrapper.slots, generateMethod)
 
@@ -339,14 +374,28 @@ class rast.PanelDrawer
     slotIndex = @subsets.slotIndex(slot)
     rast.arrayMove(@subsetWrapper.slots, slotIndex, newSlotIndex)
 
-class rast.Drawer
-    $editButtonIcon: ->
-      $('<div class="gear">')
+  # [для режиму редагування] список ґудзиків, які можна створювати. Перетягуються мишкою.
+  drawSlotClasses: ($container)->
+    $slots = $('<span class="slotClasses">')
+    for slotClass in @slotClasses()
+      $slot = $('<span class="slotClass">')
+      $slot.attr('data-slot-class', rast.name(slotClass))
+      $slot.text(slotClass.caption)
+      $slot.attr('title', 'Перетягніть на панель, щоб вставити цей вид комірки')
+      $slots.append($slot)
+    $container.append($slots)
 
+    $slots.find('.slotClass').draggable
+      connectToSortable: '.etPanel .slots'
+      helper: 'clone'
+
+  slotClasses: ->
+    [rast.PlainTextSlot, rast.InsertionSlot, rast.MultipleInsertionsSlot, rast.HtmlSlot]
+
+class rast.Drawer
     $editButton: ->
-      $editButton = @$editButtonIcon()
-      $editButton.addClass('menuButton edit')
-      $editButton.attr('title', 'Редагувати символи.')
+      icon = new OO.ui.IconWidget({ icon: 'settings', title: 'Редагувати символи', classes: ['gear'] })
+      icon.$element
 
     # кнопочки для переходу в режим редагування: [edit][save][reset]
     drawMenu: ->
@@ -372,7 +421,6 @@ class rast.Drawer
         $aboutLink = $("<a class=\"aboutLink\" target=\"_blank\" href=\"#{ @docLink }\">про додаток</a>")
 
         $menu.append(persistButton.$element, saveButton.$element, cancelButton.$element, resetButton.$element, $aboutLink)
-        @drawSlotClasses($menu)
 
       @$container.append($menu)
 
@@ -411,23 +459,6 @@ class rast.Drawer
         $addNewdiv.click(@eventsHandler.onAddSubsetClick)
 
       @$container.append($outline)
-
-    # [для режиму редагування] список ґудзиків, які можна створювати. Перетягуються мишкою.
-    drawSlotClasses: ($outline)->
-      $slots = $('<div class="slotClasses">')
-      $hint = $('<div title="Щоб створити комірку, перетягніть потрібний вид в область редагування (область редагування обведена штриховим обідком).">Види комірок:</div>')
-      $slots.append($hint)
-      for slotClass in @slotClasses
-        $slot = $('<span class="slotClass">')
-        $slot.attr('data-slot-class', rast.name(slotClass))
-        $slot.text(slotClass.caption)
-        $slot.attr('title', 'Перетягніть на панель, щоб вставити цей вид комірки')
-        $slots.append($slot)
-      $outline.append($slots)
-
-      $slots.find('.slotClass').draggable
-        connectToSortable: '.etPanel .slots'
-        helper: 'clone'
 
     draw: ->
       @$container.empty()
@@ -501,7 +532,6 @@ class rast.PlainObjectParser
       return
 
     @slotFromStr: (token) ->
-
       readModifiers = ->
         res =
           bold: false
@@ -600,7 +630,6 @@ class rast.PlainObjectParser
 
 # серіялізовний стан: всі символи + функції, які викликаються символами.
 class rast.SubsetsManager
-
     constructor: ->
       @reset()
 
@@ -922,10 +951,6 @@ class rast.PlainTextSlot extends rast.Slot
       $elem.text(@text)
       $elem.attr('data-id', @id)
       $elem.attr('style', styles || @css)
-      if @bold
-        $elem.css('font-weight', 'bold')
-      if @italic
-        $elem.css('font-style', 'italic')
       $elem
 
 class rast.InsertionSlot extends rast.Slot
@@ -972,22 +997,14 @@ class rast.InsertionSlot extends rast.Slot
         $elem = $('<div>')
         $elem.append(@caption)
         $elem.attr('data-id', @id)
-        $elem.attr('style', styles) if styles
-        if @bold
-          $elem.css('font-weight', 'bold')
-        if @italic
-          $elem.css('font-style', 'italic')
+        $elem.attr('style', styles) if styles && styles.length
         $elem
       else
         $a = $('<a>')
         $a.attr('data-id', @id)
-        $a.attr('style', styles) if styles
+        $a.attr('style', styles) if styles && styles.length
         caption = $('<div/>').text(@caption).html()
         $a.html(caption)
-        if @bold
-          $a.css('font-weight', 'bold')
-        if @italic
-          $a.css('font-style', 'italic')
         $a
 
     generateHtml: (styles)->
@@ -1037,16 +1054,10 @@ class rast.MultipleInsertionsSlot extends rast.Slot
       slots = rast.PlainObjectParser.slotsFromStr(@insertion)
       $elem = $('<div>')
       $elem.attr('data-id', @id)
-      $elem.attr('style', styles) if styles
-      if @bold
-        $elem.css('font-weight', 'bold')
-      if @italic
-        $elem.css('font-style', 'italic')
-
+      $elem.attr('style', styles) if styles && styles.length
       for slot in slots
         $slot = $(slot.generateHtml(styles))
         $elem.append($slot)
-
       $elem
 
     generateHtml: (styles)->
@@ -1140,14 +1151,15 @@ $ ->
       for func in editTools.onloadFuncs
         func()
     extraCSS: '''
+    #edittools .etPanel { margin-top: 5px; }
     #edittools .etPanel .slots [data-id] { margin: -1px -1px 0px 0px; }
     #edittools .etPanel .slots [data-id]:hover { z-index: 1; text-decoration: none; }
-    #edittools .etPanel .preview [data-id] { display: inline; padding: 0px 2px; cursor: pointer; }
-    #edittools .etPanel > [data-id] { display: inline; padding: 0px 2px; cursor: pointer; }
+    #edittools .etPanel > [data-id], #edittools .etPanel .preview [data-id] { display: inline; padding: 0px 2px; }
+    #edittools .etPanel > a[data-id], #edittools .etPanel .preview a[data-id] { cursor: pointer; }
     #edittools { min-height: 20px; }
-    #edittools .rastMenu.view { position: absolute; left: 0px; }
+    #edittools .rastMenu.view { position: absolute; left: -5px; }
     #edittools .rastMenu.edit { border-bottom: solid #aaaaaa 1px; padding: 2px 6px; }
-    #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; margin: 5px 0px; }
+    #edittools .slots.ui-sortable { min-height: 4em; border-width: 1px; border-style: dashed; margin: 5px 0px; background-color: white; }
     #edittools .slots.ui-sortable .emptyHint {  }
     #edittools .editedSlot {
       cursor: pointer;
@@ -1159,15 +1171,13 @@ $ ->
       display: block;
     }
     #edittools .editedSlot .overlay { width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; }
-    #edittools .slotClass { cursor: copy; }
+    #edittools .slotClass { cursor: copy; padding: 3px 5px; border: 1px solid grey; margin-left: 5px; }
     #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; }
     #edittools .gear {
-      background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Simpleicons_Interface_gear-wheel-in-black.svg/15px-Simpleicons_Interface_gear-wheel-in-black.svg.png');
-      height: 15px;
-      width: 15px;
-      background-repeat: no-repeat;
-      background-size: cover;
-      display: inline-block; }
+      min-height: 15px;
+      min-width: 15px;
+      cursor: pointer;
+    }
     #edittools .ui-state-highlight {
       min-width: 1em;
       min-height: 1em;
@@ -1327,7 +1337,6 @@ $ ->
           docLink: @docLink
           onTabClick: null,
           eventsHandler: @
-          slotClasses: [rast.PlainTextSlot, rast.InsertionSlot, rast.MultipleInsertionsSlot, rast.HtmlSlot]
         }
       )
 
