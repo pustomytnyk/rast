@@ -1,12 +1,9 @@
 if unsafeWindow? # для Tampermonkey
   window.$ = unsafeWindow.$
-  window.etSubsets = unsafeWindow.etSubsets
 
 window.rast =
   clone: (object)->
-    result = Object.assign({}, object)
-    Object.setPrototypeOf(result, Object.getPrototypeOf(object))
-    result
+    $.extend(true, {}, object);
 
   arrayMove: (array, from, to)->
     array.splice(to, 0, array.splice(from, 1)[0])
@@ -301,21 +298,14 @@ class rast.PanelDrawer
 
   drawEditMode: ->
     # поле вводу для назви панелі
-    $nameLabel = $('<label class="panelNameLabel">Назва:</label>')
-    $nameInputContainer = $('<div>')
-    $nameInputContainer.append($nameLabel)
-    $nameInput = $('<input type="text">').val(@subsetWrapper.caption)
-    $nameInput.change({ subsetWrapper: @subsetWrapper }, @eventsHandler.onTabNameChanged)
-    $nameInputContainer.append($nameInput)
+    nameInput = new OO.ui.TextInputWidget( { value: @subsetWrapper.caption, label: 'Назва панелі' })
+    nameInput.$element.change { subsetWrapper: @subsetWrapper }, @eventsHandler.onTabNameChanged
+    @$panel.append(nameInput.$element)
 
-    $nameInputContainer.appendTo(@$panel)
-
-    $panelRemoveButton = $('<span class="panelRemoveButton">Вилучити панель</span>')
-    $panelRemoveButton.click =>
+    removeButton =  new OO.ui.ButtonWidget({ label: 'Вилучити цю панель', flags: 'destructive' })
+    removeButton.on 'click', =>
       @eventsHandler.onRemoveSubsetClick(@subsetWrapper)
-    $removeIcon = $('<span class="removeIcon">')
-    $nameInputContainer.append($panelRemoveButton)
-    $panelRemoveButton.append($removeIcon)
+    @$panel.append(removeButton.$element)
 
     $slots = $('<div class="slots">')
     @$panel.append($slots)
@@ -367,24 +357,22 @@ class rast.Drawer
         $editButton.click(@eventsHandler.onEditClick)
         $menu.append($editButton)
       else if @mode == 'edit'
-        $dot = ->
-          $('<span> · </span>')
+        persistButton = new OO.ui.ButtonWidget({ label: ' Зберегти на постійно', title: 'Символи буде збережено на підсторінку у Вашому просторі користувача.', icon: 'checkAll' });
+        persistButton.on 'click', @eventsHandler.onPersistClick
 
-        $persistButton = $('<span class="menuButton">').attr('title', 'Символи буде збережено у Вашому особистому просторі. Для цього виконається редагування підсторінки від Вашого імени.')
-        $persistButton.text('зберегти на підсторінку').click(@eventsHandler.onPersistClick)
+        saveButton = new OO.ui.ButtonWidget({ label: ' Зберегти тимчасово', title: 'Зміни збережуться тільки на час редагування сторінки і втратяться після закриття або перевантаження сторінки.', icon: 'check' });
+        saveButton.on 'click', @eventsHandler.onSaveClick
 
-        $saveButton = $('<span class="menuButton">').attr('title', 'Зміни збережуться тільки на час редагування сторінки і втратяться після закриття або перевантаження сторінки.')
-        $saveButton.text('зберегти').click(@eventsHandler.onSaveClick)
+        cancelButton = new OO.ui.ButtonWidget({ label: ' Скасувати', title: 'Всі зміни цієї сесії редагування будуть відкинуті.', icon: 'cancel' });
+        cancelButton.on 'click', @eventsHandler.onCancelClick
 
-        $cancelButton = $('<span class="menuButton">')
-        $cancelButton.text('скасувати').click(@eventsHandler.onCancelClick).attr('title', 'Всі зміни цієї сесії редагування будуть відкинуті.')
-
-        $resetButton = $('<span class="menuButton">')
-        $resetButton.text('відновити звичаєві').click(@eventsHandler.onResetClick).attr('title', 'Буде відновлено набір символів за промовчанням.')
+        resetButton = new OO.ui.ButtonWidget({ label: ' Відновити звичаєві', title: 'Буде відновлено набір символів за промовчанням.', icon: 'reload' });
+        resetButton.on 'click', @eventsHandler.onResetClick
 
         $aboutLink = $("<a class=\"aboutLink\" target=\"_blank\" href=\"#{ @docLink }\">про додаток</a>")
 
-        $menu.append($persistButton, $dot(), $saveButton, $dot(), $cancelButton, $dot(), $resetButton, $aboutLink)
+        $menu.append(persistButton.$element, saveButton.$element, cancelButton.$element, resetButton.$element, $aboutLink)
+        @drawSlotClasses($menu)
 
       @$container.append($menu)
 
@@ -424,16 +412,13 @@ class rast.Drawer
 
       @$container.append($outline)
 
-      if @mode == 'edit' && @subsets.subsets.length
-        @drawSlotClasses($outline)
-
     # [для режиму редагування] список ґудзиків, які можна створювати. Перетягуються мишкою.
     drawSlotClasses: ($outline)->
       $slots = $('<div class="slotClasses">')
       $hint = $('<div title="Щоб створити комірку, перетягніть потрібний вид в область редагування (область редагування обведена штриховим обідком).">Види комірок:</div>')
       $slots.append($hint)
       for slotClass in @slotClasses
-        $slot = $('<div class="slotClass">')
+        $slot = $('<span class="slotClass">')
         $slot.attr('data-slot-class', rast.name(slotClass))
         $slot.text(slotClass.caption)
         $slot.attr('title', 'Перетягніть на панель, щоб вставити цей вид комірки')
@@ -477,7 +462,7 @@ class rast.Drawer
 class rast.PlainObjectParser
     @charinsertDivider: ' '
 
-    @parseTokens: (arr, hotkeysHandler) ->
+    @parseTokens: (arr) ->
       slots = []
       for token in arr
         if typeof token == 'string'
@@ -485,7 +470,7 @@ class rast.PlainObjectParser
         else if Object::toString.call(token) == '[object Array]'
           slots.push @slotFromArr(token)
         else if typeof token == 'object'
-          slot = @slotFromPlainObj(token, hotkeysHandler)
+          slot = @slotFromPlainObj(token)
           if slot
             slots.push(slot)
       slots
@@ -598,7 +583,7 @@ class rast.PlainObjectParser
         tagClose: tagClose
       }
 
-    @slotFromPlainObj: (obj, hotkeysHandler) ->
+    @slotFromPlainObj: (obj) ->
       slot = undefined
       if obj.plain
         slot = new rast.PlainTextSlot(
@@ -611,7 +596,6 @@ class rast.PlainObjectParser
         slot = @generateLink(obj)
         if !slot
           return
-        hotkeysHandler.processShortcut slot, obj
       slot
 
 # серіялізовний стан: всі символи + функції, які викликаються символами.
@@ -647,18 +631,6 @@ class rast.SubsetsManager
       for subset in @subsets
         return subset if subset.id == id
       null
-
-    processShortcut: (slot, obj) ->
-        if obj.key
-          if typeof obj.key == 'string'
-            key = obj.key[0].toUpperCase()
-            slot.key = key
-            if obj.func
-              @hotkeys[key] = obj.func
-            if obj.ins or obj.insert
-              @hotkeys[key] = ((a) ->
-                a
-              )(slot)
 
     addSubset: (caption, index)->
       subset = {
@@ -707,7 +679,6 @@ class rast.SubsetsManager
 
     reset: ->
       @subsets = []
-      @hotkeys = {}
       self = this
       @slotId = 0
       @subsetId = 0
@@ -1079,8 +1050,7 @@ class rast.MultipleInsertionsSlot extends rast.Slot
       $elem
 
     generateHtml: (styles)->
-      $elem = @generateCommonHtml(styles || @css)
-      $elem
+      @generateCommonHtml(styles || @css)
 
 class rast.HtmlSlot extends rast.Slot
     @caption: 'Довільний код'
@@ -1162,7 +1132,6 @@ class rast.PageStorage
 
 $ ->
   window.editTools =
-    hotkeys: []
     onloadFuncs: []
     mode: 'view'
     addOnloadFunc: (func) =>
@@ -1170,16 +1139,6 @@ $ ->
     fireOnloadFuncs: ->
       for func in editTools.onloadFuncs
         func()
-    checkHotkey: (e) ->
-      if e and e.ctrlKey
-        obj = editTools.hotkeys[String.fromCharCode(e.which).toUpperCase()]
-        if obj
-          if typeof obj == 'object'
-            obj.trigger 'click'
-          else
-            obj()
-          return false
-      true
     extraCSS: '''
     #edittools .etPanel .slots [data-id] { margin: -1px -1px 0px 0px; }
     #edittools .etPanel .slots [data-id]:hover { z-index: 1; text-decoration: none; }
@@ -1288,14 +1247,11 @@ $ ->
       return false unless obj
       @reset()
       @subsets.readEncodedSubsets(obj)
-      @subsetsUpdated()
+      @resetTemporarySubsets()
       @refresh()
       true
 
-    subsetsUpdated: ->
-      @temporarySubsets = rast.clone(@subsets, false)
-
-    undoChanges: ->
+    resetTemporarySubsets: ->
       @temporarySubsets = rast.clone(@subsets)
 
     refresh: ->
@@ -1324,23 +1280,20 @@ $ ->
 
     save: ->
       @subsets = @temporarySubsets
-      @subsetsUpdated()
+      @resetTemporarySubsets()
       @view()
 
     restoreDefaults: ->
       @readFromSubpage('User:AS/defaults.js')
 
     init: ->
-      @subsets = new rast.SubsetsManager
-      @temporarySubsets = new rast.SubsetsManager
-
       $tabs = $('#' + @id)
       etActiveTab = $tabs.find('.existingTabs .asnav-selectedtab').attr('data-contentid') || mw.cookie.get(editTools.cookieName + 'Selected') or 'etTabContent0'
 
       @onSaveClick = =>
         @save()
       @onCancelClick = =>
-        @undoChanges()
+        @resetTemporarySubsets()
         @view()
       @onResetClick = =>
         @restoreDefaults()
@@ -1382,15 +1335,18 @@ $ ->
       return if !$placeholder.length
       @appendExtraCSS()
       $placeholder.empty().append(@createEditTools())
-      $('input#wpSummary').attr 'style', 'margin-bottom:3px;' #fix margins after moving placeholder
+      $('input#wpSummary').attr 'style', 'margin-bottom: 3px;' #fix margins after moving placeholder
 
       @created = true
+      @temporarySubsets = new rast.SubsetsManager
       @reload()
 
     reload: ->
       $tabs = $('#' + @id)
       $tabs.throbber(true, 'prepend')
-      @readFromSubpage()
+      @readFromSubpage @subpage(), =>
+        @subsets = rast.clone(@temporarySubsets)
+        @refresh()
 
     docLink: 'https://uk.wikipedia.org/wiki/%D0%9A%D0%BE%D1%80%D0%B8%D1%81%D1%82%D1%83%D0%B2%D0%B0%D1%87:AS/%D0%9F%D0%9F%D0%A1-2'
 
@@ -1402,8 +1358,7 @@ $ ->
       @refresh()
 
     onSubpageNotFound: ->
-      unless @readFromSpecialSyntaxObject(window.etSubsets)
-        @showMessage("<div class=\"notFoundWarning\">Це повідомлення від додатка <a href=\"#{ @docLink }\">Покращеної панелі спецсимволів</a> (Налаштування -> Додатки -> Редагування). Підсторінку із символами не знайдено або не вдалося завантажити. Це нормально, якщо ви ще не зберегли жодну версію. Натисніть зліва від панелі на #{ @editButtonHtml() }, щоб редагувати символи.</div>")
+      @showMessage("<div class=\"notFoundWarning\">Це повідомлення від додатка <a href=\"#{ @docLink }\">Покращеної панелі спецсимволів</a> (Налаштування -> Додатки -> Редагування). Підсторінку із символами не знайдено або не вдалося завантажити. Це нормально, якщо ви ще не зберегли жодну версію. Натисніть зліва від панелі на #{ @editButtonHtml() }, щоб редагувати символи.</div>")
 
     serialize: ->
       JSON.stringify(@subsets, null, 2)
@@ -1411,7 +1366,10 @@ $ ->
     subpageStorageName: 'AStools.js',
 
     saveToSubpage: ->
-      @serializeToPage('User:' + mw.config.get('wgUserName') + '/' + @subpageStorageName, '[[Обговорення користувача:AS/rast.js|serialize]]')
+      @serializeToPage(@subpage(), '[[Обговорення користувача:AS/rast.js|serialize]]')
+
+    subpage: ->
+      'User:' + mw.config.get('wgUserName') + '/' + @subpageStorageName
 
     trackingPage: 'User:AS/track'
 
@@ -1427,14 +1385,13 @@ $ ->
       'User:' + mw.config.get('wgUserName') + '/' + @subpageStorageName
 
     readFromSubpage: (pagename, doneFunc)->
-      @reset()
       json = rast.PageStorage.load(
         pagename || @subpageName()
         (pagetext)=>
           pagetextWithoutNowiki = pagetext.replace(/^(\[\[[^\]]+\]\])?<nowiki>/, '').replace(/<\/nowiki>$/, '')
           serializedTools = JSON.parse(pagetextWithoutNowiki)
-          @subsets.deserialize(serializedTools)
-          @subsetsUpdated()
+          @temporarySubsets.reset()
+          @temporarySubsets.deserialize(serializedTools)
           @refresh()
           doneFunc() if doneFunc?
         ,
@@ -1468,7 +1425,6 @@ $ ->
 
   # end editTools
 
-  rast.PlainObjectParser.processShortcut = editTools.processShortcut;
   rast.PlainObjectParser.addOnloadFunc = editTools.addOnloadFunc;
 
   $(->
