@@ -376,7 +376,7 @@ class rast.PanelDrawer
 
   # [для режиму редагування] список ґудзиків, які можна створювати. Перетягуються мишкою.
   drawSlotClasses: ($container)->
-    $slots = $('<span class="slotClasses">')
+    $slots = $('<div class="slotClasses">')
     for slotClass in @slotClasses()
       $slot = $('<span class="slotClass">')
       $slot.attr('data-slot-class', rast.name(slotClass))
@@ -1171,6 +1171,7 @@ $ ->
       display: block;
     }
     #edittools .editedSlot .overlay { width: 100%; height: 100%; position: absolute; top: 0px; left: 0px; }
+    #edittools .slotClasses { text-align: center; }
     #edittools .slotClass { cursor: copy; padding: 3px 5px; border: 1px solid grey; margin-left: 5px; }
     #edittools .panelRemoveButton, #edittools .menuButton { cursor: pointer; }
     #edittools .gear {
@@ -1185,11 +1186,11 @@ $ ->
     }
     #edittools .ui-sortable-helper { min-width: 1em; min-height: 1em; }
     .specialchars-tabs {float: left; background: #E0E0E0; margin-right: 7px; }
-    .specialchars-tabs a{ display: block; }
+    .specialchars-tabs a{ display: block; padding-left: 3px; }
     #edittools { border: solid #aaaaaa 1px; }
     .mw-editTools a{ cursor: pointer; }
     .overflowHidden { overflow: hidden; }
-    .specialchars-tabs .asnav-selectedtab{ background: #F0F0F0; }
+    .specialchars-tabs .asnav-selectedtab { background: #eaecf0; border-left: 2px solid #aaaaaa; }
     #edittools .highlighted { opacity: 0.5; }
     #edittools [data-id]:hover { border-color: red; }
     #edittools .notFoundWarning { padding: 4px; }
