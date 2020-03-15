@@ -1332,7 +1332,7 @@ $ ->
     docLink: 'https://uk.wikipedia.org/wiki/%D0%9A%D0%BE%D1%80%D0%B8%D1%81%D1%82%D1%83%D0%B2%D0%B0%D1%87:AS/%D0%9F%D0%9F%D0%A1-2'
 
     editButtonHtml: ->
-      @drawer.$editButtonIcon().prop('outerHTML')
+      @drawer.$editButton().prop('outerHTML')
 
     showMessage: (html)->
       @message = html
