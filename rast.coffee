@@ -1,32 +1,3 @@
-window.migrator =
-  migrateUser: (username)->
-    page = "User:" + username + "/" + editTools.subpageStorageName
-    editTools.readFromSubpage page, ->
-      editTools.subsets.subsets.forEach (subset)->
-        subset.slots.forEach (slot)->
-          if slot.clickFunc
-            slot.clickFunc = migrator.trimDeprecatedFunc(slot.clickFunc)
-            if slot.clickFunc.includes('return s.toLowerCase()')
-              slot.clickFunc = 'rast.processSelection(function(s) { return s.toLowerCase(); })'
-            if slot.clickFunc.includes('rast.linkifyList')
-              slot.clickFunc = 'rast.processSelection(rast.linkifyList)'
-            if slot.clickFunc.includes('rast.simpleList')
-              slot.clickFunc = 'rast.processSelection(rast.simpleList)'
-            if slot.clickFunc.includes('rast.numericList')
-              slot.clickFunc = 'rast.processSelection(rast.numericList)'
-          if slot.onload
-            slot.clickFunc = migrator.trimDeprecatedFunc(slot.clickFunc)
-            if slot.onload.includes('doSearchReplace')
-              slot.onload = "rast.searchAndReplace.offset = 0;\n        rast.searchAndReplace.matchIndex = 0;\n        $(document).on('click', '#et-tool-replace-button-findnext', function(e) {\n          rast.searchAndReplace.doSearchReplace('find');\n        });\n        $(document).on('click', '#et-tool-replace-button-replace', function(e) {\n          rast.searchAndReplace.doSearchReplace('replace');\n        });\n        $(document).on('click', '#et-tool-replace-button-replaceall', function(e) {\n          rast.searchAndReplace.doSearchReplace('replaceAll');\n        });\n        $('#et-replace-nomatch, #et-replace-success, #et-replace-emptysearch, #et-replace-invalidregex').hide();"
-
-      #editTools.serializeToPage(page, 'оновлення формату')
-
-  trimDeprecatedFunc: (string)->
-    res = $.trim(string)
-    matches = res.match(/^\s*function\s*\(\s*\)\s*\{[\s\n]*((.|\n)*)[\s\n]*\}\s*$/)
-    res = matches[1] || '' if matches
-    res
-
 if unsafeWindow? # для Tampermonkey
   window.$ = unsafeWindow.$
 
