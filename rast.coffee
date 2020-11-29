@@ -264,8 +264,7 @@ class rast.PanelDrawer
     if @mode == 'edit'
       @drawEditMode()
     else if @mode == 'view'
-      generateMethod = 'generateHtml'
-      @generateHtml(@$panel, @subsetWrapper.slots, generateMethod)
+      @generateHtml(@$panel, @subsetWrapper.slots, 'generateHtml')
 
   sortableSlots: ($slots)->
     $($slots).sortable
@@ -318,12 +317,11 @@ class rast.PanelDrawer
     @drawSlotClasses(@$panel)
     $slots = $('<div class="slots">')
     @$panel.append($slots)
-    generateMethod = 'generateEditHtml'
     @sortableSlots($slots)
     if !@subsetWrapper.slots.length
       $slots.append('<span>Щоб додати комірку, сюди перетягніть потрібний вид.</span>')
     else
-      @generateHtml($slots, @subsetWrapper.slots, generateMethod)
+      @generateHtml($slots, @subsetWrapper.slots, 'generateEditHtml')
 
     $preview = $('<div>').css('border-top', '1px solid color: #aaa').addClass('preview')
     $preview.append($('<div>Попередній перегляд:</div>'))
@@ -335,6 +333,8 @@ class rast.PanelDrawer
   generateHtml: ($slotsContainer, slots, generateMethod) ->
     for slot in slots
       $slotsContainer.append(slot[generateMethod]())
+      if generateMethod is 'generateHtml'
+        slot.setupEvents()
 
   updatePreview: (subsetWrapper)->
     $previewContent = @$panel.find('.preview .content')
@@ -908,6 +908,8 @@ class rast.Slot
 
   sanitizedAttributes: ->
     rast.clone(@)
+    
+  setupEvents: ($elem)->  
 
 class rast.PlainTextSlot extends rast.Slot
     @caption: 'Простий текст'
@@ -985,7 +987,9 @@ class rast.InsertionSlot extends rast.Slot
         $a
 
     generateHtml: (styles)->
-      $elem = @generateCommonHtml(styles || @css)
+      @generateCommonHtml(styles || @css)
+      
+    setupEvents: ($elem)->
       $elem.click (event)=>
         event.preventDefault()
         if @useClickFunc
