@@ -788,6 +788,12 @@ class rast.SlotAttributesEditor
                 value: value
               })
             }
+          else if type == 'code'
+            fieldOptions = { value: value, rows: 3, autosize: true, classes: ['monospace'] }
+            {
+              getValue: 'getValue',
+              OOobject: new OO.ui.MultilineTextInputWidget(fieldOptions)
+            }
 
         inputData = {
           attribute: attribute.name,
@@ -908,7 +914,7 @@ class rast.PlainTextSlot extends rast.Slot
 
     @editableAttributes: new rast.SlotAttributes({ view:
       [
-        { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
+        { name: 'css', type: 'code', default: '', caption: 'CSS-стилі' }
         { name: 'text', type: 'text', default: 'текст', caption: 'Текст', labelAlignment: 'top' }
       ]
     })
@@ -929,7 +935,7 @@ class rast.InsertionSlot extends rast.Slot
 
     @editableAttributes: new rast.SlotAttributes({
       view: [
-        { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
+        { name: 'css', type: 'code', default: '', caption: 'CSS-стилі' }
         { name: 'caption', caption: 'Напис', type: 'text', default: 'Нова вставка' }
         { name: 'captionAsHtml', caption: 'Сприймати напис, як html-код?', type: 'boolean', default: false }
       ]
@@ -944,7 +950,7 @@ class rast.InsertionSlot extends rast.Slot
             Якщо хочете екранувати ці символи, поставте "\\" перед потрібним символом; наприклад "\\$" вставлятиме знак долара.'''
         }
         { name: 'useClickFunc', caption: 'Замість вставляння виконати іншу дію?', type: 'boolean', default: false }
-        { name: 'clickFunc', caption: 'Інша дія (при клацанні)', type: 'text', default: '', labelAlignment: 'top' }
+        { name: 'clickFunc', caption: 'Інша дія (при клацанні)', type: 'code', default: '', labelAlignment: 'top' }
       ]
     })
 
@@ -993,7 +999,7 @@ class rast.MultipleInsertionsSlot extends rast.Slot
 
     @editableAttributes: new rast.SlotAttributes({
       view: [
-        { name: 'css', type: 'text', default: '', caption: 'CSS-стилі' }
+        { name: 'css', type: 'code', default: '', caption: 'CSS-стилі' }
       ]
       functionality: [
         {
@@ -1039,10 +1045,10 @@ class rast.HtmlSlot extends rast.Slot
 
     @editableAttributes: new rast.SlotAttributes({
       view: [
-        { name: 'html', type: 'text', default: '<span>html</span>', caption: 'HTML', labelAlignment: 'top' }
+        { name: 'html', type: 'code', default: '<span>html</span>', caption: 'HTML', labelAlignment: 'top' }
       ]
       functionality: [
-        { name: 'onload', type: 'text', default: '', caption: 'JavaScript, що виконається при ініціалізації', labelAlignment: 'top' }
+        { name: 'onload', type: 'code', default: '', caption: 'JavaScript, що виконається при ініціалізації', labelAlignment: 'top' }
       ]
     })
 
@@ -1185,6 +1191,7 @@ $ ->
     .rastEditWindow .bottomButtons { margin-top: 10px; }
 
     #edittools .aboutLink { float: right; }
+    .monospace { font-family: "Monaco", "Menlo", "Ubuntu Mono", "Consolas", "source-code-pro", monospace; }
 }'''
     appendExtraCSS: ->
       mw.util.addCSS(@extraCSS)
