@@ -333,8 +333,6 @@ class rast.PanelDrawer
   generateHtml: ($slotsContainer, slots, generateMethod) ->
     for slot in slots
       $slotsContainer.append(slot[generateMethod]())
-      if generateMethod is 'generateHtml'
-        slot.setupEvents()
 
   updatePreview: (subsetWrapper)->
     $previewContent = @$panel.find('.preview .content')
@@ -891,9 +889,12 @@ class rast.Slot
       $.extend @, options, 'class': 'rast.' + @constructor.name
 
   generateEditHtml: ->
-      $element = @generateHtml()
+      $element = @generateCommonHtml()
       $($element).addClass('editedSlot')
       $element
+
+  generateHtml: ()->
+    @generateCommonHtml()
 
   toJSON: ->
     defaults = new(@constructor)
@@ -908,8 +909,6 @@ class rast.Slot
 
   sanitizedAttributes: ->
     rast.clone(@)
-    
-  setupEvents: ($elem)->  
 
 class rast.PlainTextSlot extends rast.Slot
     @caption: 'Простий текст'
@@ -925,7 +924,7 @@ class rast.PlainTextSlot extends rast.Slot
       $elem = super()
       $elem.attr('title', @text)
 
-    generateHtml: (styles)->
+    generateCommonHtml: (styles)->
       $elem = $('<span>')
       $elem.text(@text)
       $elem.attr('data-id', @id)
@@ -987,17 +986,14 @@ class rast.InsertionSlot extends rast.Slot
         $a
 
     generateHtml: (styles)->
-      @generateCommonHtml(styles || @css)
-      
-    setupEvents: ($elem)->
+      $elem = @generateCommonHtml(styles || @css)
       $elem.click (event)=>
         event.preventDefault()
         if @useClickFunc
           eval(@clickFunc)
         else
           rast.InsertionSlot.insertFunc(@insertion)
-      $elem
-
+      
 class rast.MultipleInsertionsSlot extends rast.Slot
     @caption: 'Набір вставок'
 
@@ -1073,7 +1069,7 @@ class rast.HtmlSlot extends rast.Slot
       $elem = super()
       $elem.attr('title', @html)
 
-    generateHtml: ->
+    generateCommonHtml: ->
       $elem = $(@html)
       $wrapper = $('<div>')
       $wrapper.attr('data-id', @id)
